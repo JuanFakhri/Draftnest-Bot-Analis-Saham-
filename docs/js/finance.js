@@ -61,12 +61,26 @@ function relativeValuation(emiten) {
   const bvps = bagi(lap.total_ekuitas, p.saham_beredar);
   const per = eps ? bagi(p.harga_saham, eps) : null;
   const pbv = bvps ? bagi(p.harga_saham, bvps) : null;
+
+  // Fair Value (Mean PER & PBV) — metode rata-rata historis emiten sendiri.
+  const fvPer = p.mean_per_3y && eps ? p.mean_per_3y * eps : null;
+  const fvPbv = p.mean_pbv_3y && bvps ? p.mean_pbv_3y * bvps : null;
+  const tersedia = [fvPer, fvPbv].filter((x) => x != null);
+  const fairValue = tersedia.length ? tersedia.reduce((a, b) => a + b, 0) / tersedia.length : null;
+  const mosFair = fairValue ? (fairValue - p.harga_saham) / fairValue : null;
+
   return {
     eps, bvps, per, pbv,
     per_sektor: p.per_sektor ?? null,
     pbv_sektor: p.pbv_sektor ?? null,
     harga_wajar_per: p.per_sektor && eps ? p.per_sektor * eps : null,
     harga_wajar_pbv: p.pbv_sektor && bvps ? p.pbv_sektor * bvps : null,
+    mean_per: p.mean_per_3y ?? null,
+    mean_pbv: p.mean_pbv_3y ?? null,
+    fair_value_per: fvPer,
+    fair_value_pbv: fvPbv,
+    fair_value: fairValue,
+    mos_fair_value: mosFair,
   };
 }
 

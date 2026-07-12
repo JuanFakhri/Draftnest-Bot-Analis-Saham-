@@ -32,6 +32,7 @@ matematika keuangan dihitung di JavaScript, dan interpretasi 3 pilar memanggil
 - Mode **siang & malam** (elegan, responsif)
 - **Ambil Data Otomatis** — ketik kode emiten → profil + 5 tahun laporan + harga terisi otomatis
 - **Grafik tren rasio** (ROE/ROA/Net Margin) — SVG interaktif dengan crosshair + tooltip
+- **Fair Value (Mean PER & PBV)** — harga wajar dari rata-rata PER/PBV historis emiten + Margin of Safety
 - **Proyeksi tahun mendatang** (CAGR) + **outlook AI** forward-looking
 - **Ambil Harga IDX real-time** (Yahoo Finance `.JK` via CORS-proxy, best-effort)
 - Form input ramah + kartu laporan per tahun, **Muat Contoh**, **Impor/Ekspor JSON**
@@ -64,6 +65,19 @@ Website mengisi data otomatis dari **dua sumber** (sesuai kendala CORS/auth IDX)
 2. **Fallback live (Financial Modeling Prep)** — untuk emiten di luar watchlist.
    Isi **API key FMP gratis** di ⚙️ Pengaturan; website fetch langsung dari browser.
    Kuota harian terbatas & cakupan IDX bervariasi.
+
+**Fair Value (Mean PER & PBV):** metode harga wajar berbasis rata-rata PER/PBV
+historis emiten sendiri (3 tahun), bukan rata-rata sektor:
+
+```
+Fair Value P/E   = Mean PER (3 Th) × EPS
+Fair Value PBV   = Mean PBV (3 Th) × BVPS
+Fair Value       = rata-rata keduanya
+Margin of Safety = (Fair Value − Harga) / Fair Value
+```
+
+`Mean PER/PBV (3 Th)` diisi otomatis oleh pipeline (dari harga historis Yahoo)
+atau manual di form. Ditampilkan sebagai tabel di UI, laporan `.md`, dan CLI.
 
 **Proyeksi tahun mendatang:** dari tren CAGR historis, website & CLI memproyeksikan
 pendapatan/laba/margin beberapa tahun ke depan (deterministik), dan Claude memberi
