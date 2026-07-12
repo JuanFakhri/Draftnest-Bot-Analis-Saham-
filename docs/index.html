@@ -1,0 +1,149 @@
+<!doctype html>
+<html lang="id" data-theme="dark">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Draftnest — Analisis Saham IDX</title>
+  <meta name="description" content="Bot analisis saham IDX berbasis 3 pilar: Kualitatif, Kuantitatif, Valuasi. Ditenagai Claude." />
+  <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'%3E%3Ctext y='.9em' font-size='90'%3E%F0%9F%93%88%3C/text%3E%3C/svg%3E" />
+  <link rel="stylesheet" href="css/styles.css" />
+</head>
+<body>
+  <header class="topbar">
+    <div class="brand">
+      <span class="brand-mark">📈</span>
+      <div>
+        <h1>Draftnest</h1>
+        <p class="tagline">Analisis Saham IDX · 3 Pilar</p>
+      </div>
+    </div>
+    <div class="topbar-actions">
+      <button id="btn-settings" class="icon-btn" title="Pengaturan API" aria-label="Pengaturan">⚙️</button>
+      <button id="btn-theme" class="icon-btn" title="Ganti mode siang/malam" aria-label="Tema">🌙</button>
+    </div>
+  </header>
+
+  <!-- Panel pengaturan API -->
+  <dialog id="settings" class="dialog">
+    <form method="dialog" class="dialog-body">
+      <h2>Pengaturan Claude API</h2>
+      <label>Anthropic API Key
+        <input id="api-key" type="password" placeholder="sk-ant-..." autocomplete="off" />
+      </label>
+      <label>Model
+        <input id="model" type="text" value="claude-opus-4-8" />
+      </label>
+      <p class="hint">
+        🔒 Key disimpan <strong>hanya di browser Anda</strong> (localStorage) dan dikirim
+        langsung ke api.anthropic.com. Tidak ada server perantara. Dapatkan key di
+        <a href="https://console.anthropic.com" target="_blank" rel="noopener">console.anthropic.com</a>.
+      </p>
+      <div class="dialog-actions">
+        <button value="save" class="btn btn-primary">Simpan</button>
+        <button value="cancel" class="btn">Tutup</button>
+      </div>
+    </form>
+  </dialog>
+
+  <main class="container">
+    <!-- ================= INPUT ================= -->
+    <section class="card">
+      <div class="card-head">
+        <h2>Data Emiten</h2>
+        <div class="toolbar">
+          <button id="btn-sample" class="btn btn-ghost">Muat Contoh</button>
+          <button id="btn-import" class="btn btn-ghost">Impor JSON</button>
+          <button id="btn-export" class="btn btn-ghost">Ekspor JSON</button>
+          <input id="file-import" type="file" accept="application/json" hidden />
+        </div>
+      </div>
+
+      <!-- Profil -->
+      <fieldset class="group">
+        <legend>Profil (Pilar Kualitatif)</legend>
+        <div class="grid grid-3">
+          <label>Kode<input id="p-kode" type="text" placeholder="ICBP" /></label>
+          <label>Nama<input id="p-nama" type="text" placeholder="Nama emiten" /></label>
+          <label>Sektor<input id="p-sektor" type="text" placeholder="Consumer Non-Cyclicals" /></label>
+        </div>
+        <label>Sub-sektor<input id="p-subsektor" type="text" placeholder="Food & Beverage" /></label>
+        <label>Model Bisnis<textarea id="p-bisnis" rows="2"></textarea></label>
+        <label>Manajemen<textarea id="p-manajemen" rows="2"></textarea></label>
+        <label>Keunggulan Kompetitif<textarea id="p-moat" rows="2"></textarea></label>
+        <label>Prospek Industri<textarea id="p-prospek" rows="2"></textarea></label>
+        <label>Berita Terkini<textarea id="p-berita" rows="2"></textarea></label>
+      </fieldset>
+
+      <!-- Laporan Tahunan -->
+      <fieldset class="group">
+        <legend>Laporan Keuangan (Pilar Kuantitatif)</legend>
+        <p class="hint">Isi min. 2 tahun untuk menghitung pertumbuhan. Satuan bebas asal konsisten (mis. miliar Rupiah).</p>
+        <div id="years"></div>
+        <button id="btn-add-year" class="btn btn-ghost" type="button">+ Tambah Tahun</button>
+      </fieldset>
+
+      <!-- Data Pasar -->
+      <fieldset class="group">
+        <legend>Data Pasar & Asumsi (Pilar Valuasi)</legend>
+        <div class="grid grid-4">
+          <label>Harga Saham (Rp)<input id="m-harga" type="number" step="any" /></label>
+          <label>Saham Beredar<input id="m-saham" type="number" step="any" /></label>
+          <label>PER Sektor<input id="m-per" type="number" step="any" /></label>
+          <label>PBV Sektor<input id="m-pbv" type="number" step="any" /></label>
+          <label>Growth FCF<input id="m-growth" type="number" step="any" value="0.08" /></label>
+          <label>Discount Rate<input id="m-discount" type="number" step="any" value="0.11" /></label>
+          <label>Terminal Growth<input id="m-terminal" type="number" step="any" value="0.03" /></label>
+          <label>Tahun Proyeksi<input id="m-tahun" type="number" step="1" value="5" /></label>
+        </div>
+      </fieldset>
+
+      <div class="actions">
+        <button id="btn-offline" class="btn btn-secondary">Hitung Rasio & Valuasi</button>
+        <button id="btn-ai" class="btn btn-primary">✨ Analisis Lengkap dengan AI</button>
+      </div>
+      <p id="status" class="status" role="status" aria-live="polite"></p>
+    </section>
+
+    <!-- ================= HASIL ================= -->
+    <section id="results" class="card" hidden>
+      <div class="card-head">
+        <h2 id="result-title">Hasil Analisis</h2>
+        <div class="toolbar">
+          <button id="btn-download" class="btn btn-ghost">Unduh .md</button>
+          <button id="btn-print" class="btn btn-ghost">Cetak</button>
+        </div>
+      </div>
+
+      <!-- Kesimpulan -->
+      <div class="verdict">
+        <div id="rec-badge" class="rec-badge">—</div>
+        <div class="score-gauge">
+          <div class="gauge-num"><span id="score-final">–</span><small>/10</small></div>
+          <div class="gauge-label">Skor Akhir</div>
+        </div>
+        <div class="pillar-bars">
+          <div class="bar-row"><span>Kualitatif</span><div class="bar"><i id="bar-kual"></i></div><b id="num-kual">–</b></div>
+          <div class="bar-row"><span>Kuantitatif</span><div class="bar"><i id="bar-kuant"></i></div><b id="num-kuant">–</b></div>
+          <div class="bar-row"><span>Valuasi</span><div class="bar"><i id="bar-val"></i></div><b id="num-val">–</b></div>
+        </div>
+      </div>
+
+      <!-- Detail per pilar -->
+      <div id="detail"></div>
+
+      <p class="disclaimer">
+        ⚠️ Analisis otomatis untuk edukasi/riset — <strong>bukan</strong> rekomendasi jual/beli.
+        Selalu lakukan riset mandiri (DYOR). Hasil DCF sangat sensitif terhadap asumsi.
+      </p>
+    </section>
+  </main>
+
+  <footer class="footer">
+    <p>Draftnest · Bot Analisis Saham IDX ·
+      <a href="https://github.com/JuanFakhri/Draftnest-Bot-Analis-Saham-" target="_blank" rel="noopener">GitHub</a>
+    </p>
+  </footer>
+
+  <script type="module" src="js/app.js"></script>
+</body>
+</html>

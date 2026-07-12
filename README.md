@@ -13,6 +13,63 @@ menilai dan menyimpulkan.
 Setiap pilar diberi skor 1–10 + justifikasi, lalu digabung menjadi satu laporan
 dengan **skor akhir** dan **rekomendasi** (Beli / Tahan / Jual).
 
+Tersedia dalam **dua bentuk**:
+- 🌐 **Website** (`docs/`) — SPA statis di GitHub Pages, analisis real-time di browser
+  (UI elegan, mode siang/malam, form input, impor/ekspor JSON, unduh laporan).
+- 🖥️ **CLI Python** (`draftnest/`) — untuk otomasi, plus **scraper IDX** (profil,
+  harga, parser XBRL laporan keuangan).
+
+---
+
+## 🌐 Website (GitHub Pages)
+
+Situs statis di folder [`docs/`](docs/). Berjalan penuh di browser:
+matematika keuangan dihitung di JavaScript, dan interpretasi 3 pilar memanggil
+**Claude API langsung dari browser** memakai API key milik Anda sendiri
+(disimpan hanya di `localStorage`, tidak ada server perantara).
+
+**Fitur:**
+- Mode **siang & malam** (elegan, responsif)
+- Form input ramah + kartu laporan per tahun (Neraca / Laba Rugi / Arus Kas)
+- **Muat Contoh**, **Impor JSON**, **Ekspor JSON**
+- **Hitung Rasio & Valuasi** (offline, tanpa API key) — instan
+- **Analisis Lengkap dengan AI** (3 pilar via Claude)
+- Kartu skor per pilar, tabel rasio, rincian DCF, badge rekomendasi
+- **Unduh laporan .md** & cetak
+
+**Aktifkan Pages:** Settings → Pages → Source: **GitHub Actions**. Workflow
+[`.github/workflows/deploy-pages.yml`](.github/workflows/deploy-pages.yml)
+menerbitkan `docs/` otomatis setiap push ke `main`. Coba lokal:
+
+```bash
+cd docs && python -m http.server 8000   # buka http://localhost:8000
+```
+
+---
+
+## Pengambilan Data Otomatis dari IDX
+
+Modul [`draftnest/idx_scraper.py`](draftnest/idx_scraper.py):
+
+- **Profil & harga** — endpoint JSON IDX (best-effort; IDX memakai proteksi bot
+  sehingga bisa terblokir/rate-limit).
+- **Laporan keuangan** — **parser XBRL** (paling andal). Unduh file
+  `instance.xbrl` laporan keuangan dari idx.co.id, lalu parse offline.
+
+```bash
+# Rakit data emiten dari IDX (profil/harga) + XBRL, simpan ke JSON, lalu analisis
+python -m draftnest --fetch ICBP --xbrl 2023.xbrl --xbrl 2024.xbrl \
+  --save-json data/ICBP.json
+
+# Hanya XBRL (lewati harga IDX), tentukan tahun manual
+python -m draftnest --fetch ICBP --xbrl instance.xbrl --year 2024 --no-market --offline
+```
+
+Parser XBRL memetakan konsep taksonomi IDX/IFRS (`Assets`, `Equity`,
+`SalesAndRevenue`, `ProfitLoss`, `NetCashFlowsReceivedFromUsedInOperatingActivities`,
+dst.) ke field laporan. Bagian yang gagal diambil dibiarkan kosong untuk
+dilengkapi manual.
+
 ---
 
 ## Alur Bot
@@ -114,6 +171,7 @@ dari JSON.
 draftnest/
   models.py        # dataclass input (profil, laporan, data pasar)
   data_loader.py   # muat emiten dari JSON
+  idx_scraper.py   # ambil data IDX (profil/harga) + parser XBRL laporan keuangan
   ratios.py        # Pilar 2: hitung rasio (data olahan) — deterministik
   valuation.py     # Pilar 3: PER/PBV (relative) + DCF (absolute) — deterministik
   client.py        # pembungkus Anthropic Claude API (structured output)
@@ -125,6 +183,13 @@ draftnest/
   formatter.py     # render laporan Markdown
   cli.py           # antarmuka baris perintah
 data/ICBP.json     # contoh emiten (ilustratif)
+docs/              # website statis (GitHub Pages)
+  index.html
+  css/styles.css   # tema elegan + mode siang/malam
+  js/finance.js    # port matematika keuangan ke browser
+  js/claude.js     # panggilan Claude API dari browser (3 pilar)
+  js/app.js        # logika UI
+.github/workflows/deploy-pages.yml   # deploy otomatis ke Pages
 ```
 
 ## Sebagai Library
