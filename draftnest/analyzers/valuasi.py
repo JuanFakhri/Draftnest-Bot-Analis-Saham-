@@ -8,7 +8,10 @@ from __future__ import annotations
 
 from typing import Any, Optional
 
+from typing import Optional
+
 from ..client import ClaudeClient
+from ..forecast import HasilProyeksi
 from ..valuation import HasilValuasi
 from ._schema import skema_pilar
 
@@ -33,8 +36,28 @@ SKEMA = skema_pilar(
             "type": "string",
             "description": "Ringkasan 2-4 kalimat menggabungkan kedua jalur valuasi.",
         },
+        "outlook_tahun_depan": {
+            "type": "string",
+            "description": "Outlook 2-4 kalimat untuk tahun-tahun mendatang berdasarkan "
+            "proyeksi tren + prospek, termasuk risiko utama terhadap proyeksi.",
+        },
     },
 )
+
+
+def _teks_proyeksi(proyeksi: Optional[HasilProyeksi]) -> str:
+    if not proyeksi or not proyeksi.proyeksi:
+        return "(proyeksi tak tersedia — butuh >= 2 tahun data)"
+    baris = [
+        f"  {p.tahun}: pendapatan ~{p.pendapatan:,.0f}, laba bersih ~{p.laba_bersih:,.0f}, "
+        f"margin ~{(p.net_margin * 100):.1f}%" if p.net_margin is not None else
+        f"  {p.tahun}: pendapatan ~{p.pendapatan:,.0f}, laba bersih ~{p.laba_bersih:,.0f}"
+        for p in proyeksi.proyeksi
+    ]
+    return (
+        f"CAGR pendapatan {_pct(proyeksi.cagr_pendapatan)}, CAGR laba {_pct(proyeksi.cagr_laba)}\n"
+        + "\n".join(baris)
+    )
 
 
 def _rp(x: Optional[float]) -> str:
@@ -49,7 +72,7 @@ def _pct(x: Optional[float]) -> str:
     return f"{x * 100:.1f}%" if x is not None else "n/a"
 
 
-def _prompt(kode: str, v: HasilValuasi) -> str:
+def _prompt(kode: str, v: HasilValuasi, proyeksi: Optional[HasilProyeksi]) -> str:
     r = v.relative
     a = v.absolute
     return f"""Nilai kewajaran harga saham {kode}.
@@ -70,10 +93,18 @@ Enterprise value : {a.enterprise_value:,.0f}
 Nilai intrinsik  : {_rp(a.nilai_intrinsik_per_saham)} per lembar
 Margin of safety : {_pct(v.margin_of_safety)} (positif = harga di bawah nilai intrinsik)
 
+== Proyeksi Tahun Mendatang (ekstrapolasi CAGR) ==
+{_teks_proyeksi(proyeksi)}
+
 Beri skor 1-10 (10 = paling menarik / paling undervalued) + justifikasi untuk
 relative_valuation dan absolute_valuation. Tentukan status: undervalued /
-fairvalued / overvalued. Ingatkan bila hasil DCF sangat sensitif terhadap asumsi."""
+fairvalued / overvalued. Isi 'outlook_tahun_depan' dengan pandangan ke depan
+berdasar proyeksi di atas plus risiko utamanya. Ingatkan bila DCF/proyeksi
+sangat sensitif terhadap asumsi."""
 
 
-def analisis_valuasi_llm(client: ClaudeClient, kode: str, v: HasilValuasi) -> dict[str, Any]:
-    return client.analisis(SYSTEM, _prompt(kode, v), SKEMA)
+def analisis_valuasi_llm(
+    client: ClaudeClient, kode: str, v: HasilValuasi,
+    proyeksi: Optional[HasilProyeksi] = None,
+) -> dict[str, Any]:
+    return client.analisis(SYSTEM, _prompt(kode, v, proyeksi), SKEMA)

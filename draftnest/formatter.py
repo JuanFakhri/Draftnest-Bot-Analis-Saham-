@@ -121,6 +121,22 @@ def format_markdown(h: HasilAnalisis) -> str:
         L.append("_Data pasar tidak tersedia — valuasi dilewati._")
     L.append("")
 
+    # --- Proyeksi Tahun Mendatang ---
+    if h.proyeksi_data and h.proyeksi_data.proyeksi:
+        pr = h.proyeksi_data
+        L.append("## 4. Proyeksi Tahun Mendatang")
+        L.append(f"_Ekstrapolasi tren — CAGR pendapatan {_pct(pr.cagr_pendapatan)}, "
+                 f"laba {_pct(pr.cagr_laba)}. Bukan ramalan pasti._")
+        L.append("")
+        L.append("| Tahun | Pendapatan (proy.) | Laba Bersih (proy.) | Net Margin |")
+        L.append("|---|---|---|---|")
+        for p in pr.proyeksi:
+            L.append(f"| {p.tahun} | {p.pendapatan:,.0f} | {p.laba_bersih:,.0f} | {_pct(p.net_margin)} |")
+        if h.valuasi_llm and h.valuasi_llm.get("outlook_tahun_depan"):
+            L.append("")
+            L.append(f"> {h.valuasi_llm['outlook_tahun_depan']}")
+        L.append("")
+
     # --- Disclaimer ---
     L.append("---")
     L.append("_Disclaimer: Analisis ini dihasilkan otomatis untuk tujuan edukasi/riset "

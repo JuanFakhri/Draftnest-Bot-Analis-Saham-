@@ -102,6 +102,27 @@ function absoluteValuation(emiten) {
   };
 }
 
+// Proyeksi tahun mendatang berbasis CAGR (port dari draftnest/forecast.py).
+export function proyeksiTahunDepan(emiten, nTahun = 3) {
+  const lap = [...emiten.laporan].sort((a, b) => a.tahun - b.tahun);
+  if (lap.length < 2) return { cagr_pendapatan: null, cagr_laba: null, proyeksi: [] };
+  const periode = lap.at(-1).tahun - lap[0].tahun;
+  const gPend = cagr(lap[0].pendapatan, lap.at(-1).pendapatan, periode);
+  const gLaba = cagr(lap[0].laba_bersih, lap.at(-1).laba_bersih, periode);
+  const t = lap.at(-1);
+  let pend = t.pendapatan, laba = t.laba_bersih;
+  const proyeksi = [];
+  for (let i = 1; i <= nTahun; i++) {
+    if (gPend != null) pend *= 1 + gPend;
+    if (gLaba != null) laba *= 1 + gLaba;
+    proyeksi.push({
+      tahun: t.tahun + i, pendapatan: pend, laba_bersih: laba,
+      net_margin: pend ? laba / pend : null,
+    });
+  }
+  return { cagr_pendapatan: gPend, cagr_laba: gLaba, proyeksi };
+}
+
 export function analisisValuasi(emiten) {
   if (!emiten.pasar) return null;
   const rel = relativeValuation(emiten);

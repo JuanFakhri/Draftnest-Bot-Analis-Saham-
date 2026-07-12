@@ -1,10 +1,11 @@
 // app.js — logika UI Draftnest.
-import { analisisKuantitatif, analisisValuasi } from "./finance.js";
+import { analisisKuantitatif, analisisValuasi, proyeksiTahunDepan } from "./finance.js";
 import {
   DEFAULT_MODEL, analisisKualitatif, analisisKuantitatifLLM, analisisValuasiLLM,
 } from "./claude.js";
 import { renderTrendChart } from "./chart.js";
 import { ambilHargaIDX } from "./idx-price.js";
+import { muatPraAmbil, fetchFMP } from "./data-fetch.js";
 
 const $ = (id) => document.getElementById(id);
 const BOBOT = { kualitatif: 0.35, kuantitatif: 0.35, valuasi: 0.30 };
@@ -51,12 +52,14 @@ $("btn-theme").addEventListener("click", () => {
 function initSettings() {
   $("api-key").value = localStorage.getItem("draftnest-key") || "";
   $("model").value = localStorage.getItem("draftnest-model") || DEFAULT_MODEL;
+  $("fmp-key").value = localStorage.getItem("draftnest-fmp") || "";
 }
 $("btn-settings").addEventListener("click", () => $("settings").showModal());
 $("settings").addEventListener("close", () => {
   if ($("settings").returnValue === "save") {
     localStorage.setItem("draftnest-key", $("api-key").value.trim());
     localStorage.setItem("draftnest-model", $("model").value.trim() || DEFAULT_MODEL);
+    localStorage.setItem("draftnest-fmp", $("fmp-key").value.trim());
     setStatus("Pengaturan tersimpan.", "ok");
   }
 });
@@ -174,6 +177,40 @@ $("file-import").addEventListener("change", async (ev) => {
   } catch (_) { setStatus("File JSON tidak valid.", "err"); }
 });
 
+// ---------- Ambil Data Otomatis (pra-ambil -> fallback FMP) ----------
+$("btn-autofetch").addEventListener("click", async () => {
+  const kode = ($("fetch-kode").value || $("p-kode").value).trim().toUpperCase();
+  const note = $("fetch-note");
+  const btn = $("btn-autofetch");
+  if (!kode) { note.textContent = "Ketik kode emiten dulu."; return; }
+  btn.disabled = true; note.textContent = `Mengambil data ${kode}…`;
+  try {
+    let data = await muatPraAmbil(kode);
+    let sumber = "data pra-ambil (pipeline)";
+    if (!data || !(data.laporan && data.laporan.length)) {
+      // Fallback live via FMP (butuh key).
+      const fmpKey = localStorage.getItem("draftnest-fmp");
+      note.textContent = `Tidak ada di data pra-ambil. Mencoba FMP live…`;
+      data = await fetchFMP(kode, fmpKey);
+      sumber = "FMP (live)";
+    }
+    isiForm(data);
+    const nTahun = (data.laporan || []).length;
+    note.textContent = `✓ ${data.profil?.nama || kode} — ${nTahun} tahun laporan (${sumber}). ` +
+      (data.pasar ? "" : "Lengkapi harga & saham beredar. ") +
+      "Lengkapi PER/PBV sektor untuk harga wajar relatif.";
+    // Auto-analisa.
+    if (nTahun >= 1) {
+      const autoAI = $("auto-ai").checked && localStorage.getItem("draftnest-key");
+      await jalankan(Boolean(autoAI));
+    }
+  } catch (e) {
+    note.textContent = "⚠️ " + e.message + " Anda tetap bisa isi manual atau Muat Contoh.";
+  } finally {
+    btn.disabled = false;
+  }
+});
+
 // ---------- Ambil harga IDX (real-time via proxy) ----------
 $("btn-fetch-price").addEventListener("click", async () => {
   const kode = $("p-kode").value.trim();
@@ -220,6 +257,7 @@ async function jalankan(pakaiAI) {
 
   const kuant = analisisKuantitatif(emiten);
   const valu = analisisValuasi(emiten);
+  const proyeksi = proyeksiTahunDepan(emiten);
 
   let kualLLM = null, kuantLLM = null, valuLLM = null;
   if (pakaiAI) {
@@ -234,8 +272,8 @@ async function jalankan(pakaiAI) {
       setStatus("Menganalisis pilar Kuantitatif…");
       kuantLLM = await analisisKuantitatifLLM(key, model, emiten.profil.kode, kuant);
       if (valu) {
-        setStatus("Menganalisis pilar Valuasi…");
-        valuLLM = await analisisValuasiLLM(key, model, emiten.profil.kode, valu);
+        setStatus("Menganalisis pilar Valuasi & outlook…");
+        valuLLM = await analisisValuasiLLM(key, model, emiten.profil.kode, valu, proyeksi);
       }
       setStatus("Selesai.", "ok");
     } catch (err) {
@@ -248,7 +286,7 @@ async function jalankan(pakaiAI) {
     setStatus("Rasio & valuasi dihitung (offline).", "ok");
   }
 
-  render(emiten, kuant, valu, kualLLM, kuantLLM, valuLLM);
+  render(emiten, kuant, valu, proyeksi, kualLLM, kuantLLM, valuLLM);
 }
 $("btn-offline").addEventListener("click", () => jalankan(false));
 $("btn-ai").addEventListener("click", () => jalankan(true));
@@ -260,7 +298,7 @@ function disableBtns(v) {
 
 // ---------- Render ----------
 let laporanMd = "";
-function render(emiten, kuant, valu, kualLLM, kuantLLM, valuLLM) {
+function render(emiten, kuant, valu, proyeksi, kualLLM, kuantLLM, valuLLM) {
   const skorPilar = {
     kualitatif: rataSkor(kualLLM, ["model_bisnis", "manajemen", "keunggulan_kompetitif", "prospek_industri"]),
     kuantitatif: rataSkor(kuantLLM, ["profitabilitas", "solvabilitas", "likuiditas", "pertumbuhan"]),
@@ -293,8 +331,10 @@ function render(emiten, kuant, valu, kualLLM, kuantLLM, valuLLM) {
   D.appendChild(pilarKualitatif(kualLLM));
   D.appendChild(pilarKuantitatif(kuant, kuantLLM));
   if (valu) D.appendChild(pilarValuasi(valu, valuLLM));
+  const proj = pilarProyeksi(proyeksi, valuLLM);
+  if (proj) D.appendChild(proj);
 
-  laporanMd = buatMarkdown(emiten, kuant, valu, kualLLM, kuantLLM, valuLLM, skorPilar, skorAkhir, rec);
+  laporanMd = buatMarkdown(emiten, kuant, valu, proyeksi, kualLLM, kuantLLM, valuLLM, skorPilar, skorAkhir, rec);
   $("results").hidden = false;
   $("results").scrollIntoView({ behavior: "smooth" });
 }
@@ -369,8 +409,25 @@ function pilarValuasi(valu, llm) {
   return s;
 }
 
+function pilarProyeksi(proyeksi, valuLLM) {
+  if (!proyeksi || !proyeksi.proyeksi.length) return null;
+  const s = document.createElement("div");
+  s.className = "pillar";
+  const rows = proyeksi.proyeksi.map((p) =>
+    `<tr><td>${p.tahun}</td><td>${Math.round(p.pendapatan).toLocaleString("id-ID")}</td>
+     <td>${Math.round(p.laba_bersih).toLocaleString("id-ID")}</td><td>${pct(p.net_margin)}</td></tr>`).join("");
+  s.innerHTML = `<h3>4. Proyeksi Tahun Mendatang</h3>
+    <p class="hint">Ekstrapolasi tren — CAGR pendapatan ${pct(proyeksi.cagr_pendapatan)},
+      laba ${pct(proyeksi.cagr_laba)}. Bukan ramalan pasti.</p>
+    <table class="ratios"><thead><tr><th>Tahun</th><th>Pendapatan (proy.)</th><th>Laba Bersih (proy.)</th><th>Net Margin</th></tr></thead>
+    <tbody>${rows}</tbody></table>`;
+  if (valuLLM?.outlook_tahun_depan)
+    s.insertAdjacentHTML("beforeend", `<div class="summary">${valuLLM.outlook_tahun_depan}</div>`);
+  return s;
+}
+
 // ---------- Markdown untuk unduhan ----------
-function buatMarkdown(e, kuant, valu, kualLLM, kuantLLM, valuLLM, skorPilar, skorAkhir, rec) {
+function buatMarkdown(e, kuant, valu, proyeksi, kualLLM, kuantLLM, valuLLM, skorPilar, skorAkhir, rec) {
   const L = [];
   L.push(`# Analisis Saham — ${e.profil.nama || e.profil.kode} (${e.profil.kode})`);
   L.push(`_Sektor: ${e.profil.sektor} · ${new Date().toISOString().slice(0, 10)}_\n`);
@@ -405,6 +462,15 @@ function buatMarkdown(e, kuant, valu, kualLLM, kuantLLM, valuLLM, skorPilar, sko
     L.push(poin(valuLLM, "relative_valuation", "Relative Valuation"));
     L.push(poin(valuLLM, "absolute_valuation", "Absolute Valuation"));
   }
+  if (proyeksi && proyeksi.proyeksi.length) {
+    L.push(`\n## 4. Proyeksi Tahun Mendatang`);
+    L.push(`_CAGR pendapatan ${pct(proyeksi.cagr_pendapatan)}, laba ${pct(proyeksi.cagr_laba)}._`);
+    L.push(`| Tahun | Pendapatan (proy.) | Laba Bersih (proy.) | Net Margin |`);
+    L.push(`|---|---|---|---|`);
+    proyeksi.proyeksi.forEach((p) =>
+      L.push(`| ${p.tahun} | ${Math.round(p.pendapatan).toLocaleString("id-ID")} | ${Math.round(p.laba_bersih).toLocaleString("id-ID")} | ${pct(p.net_margin)} |`));
+    if (valuLLM?.outlook_tahun_depan) L.push(`\n> ${valuLLM.outlook_tahun_depan}`);
+  }
   L.push(`\n---\n_Disclaimer: analisis otomatis untuk edukasi/riset, bukan rekomendasi jual/beli. DYOR._`);
   return L.join("\n");
 }
@@ -418,7 +484,18 @@ $("btn-download").addEventListener("click", () => {
 });
 $("btn-print").addEventListener("click", () => window.print());
 
+// ---------- Datalist emiten pra-ambil ----------
+async function initDatalist() {
+  try {
+    const idx = await (await fetch("data/index.json", { cache: "no-cache" })).json();
+    const dl = $("kode-list");
+    dl.innerHTML = (idx.emiten || [])
+      .map((e) => `<option value="${e.kode}">${e.nama}</option>`).join("");
+  } catch (_) { /* index belum ada — abaikan */ }
+}
+
 // ---------- Init ----------
 initTema();
 initSettings();
+initDatalist();
 tambahKartuTahun();

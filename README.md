@@ -30,10 +30,11 @@ matematika keuangan dihitung di JavaScript, dan interpretasi 3 pilar memanggil
 
 **Fitur:**
 - Mode **siang & malam** (elegan, responsif)
-- Form input ramah + kartu laporan per tahun (Neraca / Laba Rugi / Arus Kas)
-- **Ambil Harga IDX real-time** (Yahoo Finance `.JK` via CORS-proxy, best-effort)
+- **Ambil Data Otomatis** — ketik kode emiten → profil + 5 tahun laporan + harga terisi otomatis
 - **Grafik tren rasio** (ROE/ROA/Net Margin) — SVG interaktif dengan crosshair + tooltip
-- **Muat Contoh**, **Impor JSON**, **Ekspor JSON**
+- **Proyeksi tahun mendatang** (CAGR) + **outlook AI** forward-looking
+- **Ambil Harga IDX real-time** (Yahoo Finance `.JK` via CORS-proxy, best-effort)
+- Form input ramah + kartu laporan per tahun, **Muat Contoh**, **Impor/Ekspor JSON**
 - **Hitung Rasio & Valuasi** (offline, tanpa API key) — instan
 - **Analisis Lengkap dengan AI** (3 pilar via Claude)
 - Kartu skor per pilar, tabel rasio, rincian DCF, badge rekomendasi
@@ -49,7 +50,26 @@ cd docs && python -m http.server 8000   # buka http://localhost:8000
 
 ---
 
-## Pengambilan Data Otomatis dari IDX
+## Auto-isi Data: Pipeline + Fallback Live
+
+Website mengisi data otomatis dari **dua sumber** (sesuai kendala CORS/auth IDX):
+
+1. **Pipeline GitHub Actions + yfinance** (utama, andal, tanpa API key)
+   - Workflow [`update-data.yml`](.github/workflows/update-data.yml) mengambil
+     data server-side untuk daftar emiten di [`data/watchlist.txt`](data/watchlist.txt),
+     menulis `docs/data/<kode>.json` + `index.json`, lalu commit ke repo.
+   - Terjadwal harian + bisa dipicu manual (workflow_dispatch, isi kode).
+   - Website memuat JSON pra-ambil → **ketik kode → langsung terisi**.
+   - Jalankan lokal: `pip install -r requirements-data.txt && python -m draftnest.pipeline BBCA TLKM`
+2. **Fallback live (Financial Modeling Prep)** — untuk emiten di luar watchlist.
+   Isi **API key FMP gratis** di ⚙️ Pengaturan; website fetch langsung dari browser.
+   Kuota harian terbatas & cakupan IDX bervariasi.
+
+**Proyeksi tahun mendatang:** dari tren CAGR historis, website & CLI memproyeksikan
+pendapatan/laba/margin beberapa tahun ke depan (deterministik), dan Claude memberi
+**outlook forward-looking** beserta risikonya (DCF juga sudah memproyeksi 5 tahun FCF).
+
+## Pengambilan Data dari IDX (XBRL)
 
 Modul [`draftnest/idx_scraper.py`](draftnest/idx_scraper.py):
 
@@ -185,6 +205,9 @@ draftnest/
   models.py        # dataclass input (profil, laporan, data pasar)
   data_loader.py   # muat emiten dari JSON
   idx_scraper.py   # ambil data IDX (profil/harga) + parser XBRL laporan keuangan
+  yahoo_fetch.py   # ambil profil + 5 tahun laporan + harga via yfinance
+  pipeline.py      # pra-ambil data watchlist -> docs/data/*.json (dipakai Actions)
+  forecast.py      # proyeksi tahun mendatang (CAGR)
   ratios.py        # Pilar 2: hitung rasio (data olahan) — deterministik
   valuation.py     # Pilar 3: PER/PBV (relative) + DCF (absolute) — deterministik
   client.py        # pembungkus Anthropic Claude API (structured output)
@@ -203,10 +226,15 @@ docs/              # website statis (GitHub Pages)
   js/claude.js     # panggilan Claude API dari browser (3 pilar)
   js/chart.js      # grafik tren rasio (SVG interaktif)
   js/idx-price.js  # ambil harga IDX real-time via CORS-proxy
+  js/data-fetch.js # auto-isi data: pra-ambil JSON + fallback FMP live
   js/app.js        # logika UI
-tests/             # unit test (unittest, tanpa dependensi)
+  data/            # data emiten pra-ambil (diisi pipeline) + index.json
+data/watchlist.txt         # daftar emiten untuk pipeline
+tests/                     # unit test (unittest, tanpa dependensi)
+requirements-data.txt      # dependensi pipeline (yfinance)
 .github/workflows/deploy-pages.yml   # deploy otomatis ke Pages
 .github/workflows/tests.yml          # CI unit test
+.github/workflows/update-data.yml    # pipeline data emiten (terjadwal)
 ```
 
 ## Sebagai Library
