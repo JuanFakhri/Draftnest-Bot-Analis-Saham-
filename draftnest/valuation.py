@@ -34,8 +34,9 @@ class RelativeValuation:
     mean_pbv: Optional[float]
     fair_value_per: Optional[float]      # Mean PER x EPS
     fair_value_pbv: Optional[float]      # Mean PBV x BVPS
-    fair_value: Optional[float]          # rata-rata kedua fair value
+    fair_value: Optional[float]          # nilai wajar terpilih (lihat metode_fair_value)
     mos_fair_value: Optional[float]      # margin of safety thd fair value
+    metode_fair_value: Optional[str]     # sumber nilai wajar terpilih
 
 
 @dataclass
@@ -84,6 +85,25 @@ def _relative(emiten: Emiten) -> RelativeValuation:
     fv_pbv = (pasar.mean_pbv_3y * bvps) if (pasar.mean_pbv_3y and bvps) else None
     tersedia = [x for x in (fv_per, fv_pbv) if x is not None]
     fair_value = sum(tersedia) / len(tersedia) if tersedia else None
+    metode_fv: Optional[str] = "Mean PER & PBV (historis emiten)" if fair_value else None
+
+    # Fallback agar nilai wajar tetap terisi walau Mean PER/PBV & data sektor
+    # tak tersedia (kasus umum untuk data auto-fetch):
+    if fair_value is None:
+        # 1) Justified P/B berbasis ROE (model Gordon): P/B wajar = (ROE - g)/(r - g).
+        roe = _bagi(lap.laba_bersih, lap.total_ekuitas)
+        r, g = pasar.discount_rate, pasar.terminal_growth
+        if roe is not None and bvps and r > g and roe > g:
+            fv_just = ((roe - g) / (r - g)) * bvps
+            if fv_just > 0:
+                fair_value, metode_fv = fv_just, "Justified P/B berbasis ROE (Gordon)"
+        # 2) Rata-rata harga wajar sektor (bila PER/PBV sektor diisi).
+        if fair_value is None:
+            wajar_sektor = [x for x in (harga_wajar_per, harga_wajar_pbv) if x is not None and x > 0]
+            if wajar_sektor:
+                fair_value = sum(wajar_sektor) / len(wajar_sektor)
+                metode_fv = "Rata-rata harga wajar sektor (PER/PBV)"
+
     mos_fair = ((fair_value - pasar.harga_saham) / fair_value) if fair_value else None
 
     return RelativeValuation(
@@ -93,6 +113,7 @@ def _relative(emiten: Emiten) -> RelativeValuation:
         mean_per=pasar.mean_per_3y, mean_pbv=pasar.mean_pbv_3y,
         fair_value_per=fv_per, fair_value_pbv=fv_pbv,
         fair_value=fair_value, mos_fair_value=mos_fair,
+        metode_fair_value=metode_fv,
     )
 
 

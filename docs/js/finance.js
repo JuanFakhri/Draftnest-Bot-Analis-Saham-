@@ -10,6 +10,16 @@ export function cagr(awal, akhir, periode) {
   return Math.pow(akhir / awal, 1 / periode) - 1;
 }
 
+// CAGR dari tahun-POSITIF-pertama ke terakhir (abaikan tahun awal bernilai 0/negatif).
+export function cagrSeri(laporan, ambil) {
+  const seri = laporan.map((l) => [l.tahun, ambil(l)]);
+  const awal = seri.find(([, v]) => v != null && v > 0);
+  if (!awal) return null;
+  const [t0, v0] = awal;
+  const [t1, v1] = seri[seri.length - 1];
+  return cagr(v0, v1, t1 - t0);
+}
+
 export function fcf(lap) {
   if (lap.free_cash_flow != null) return lap.free_cash_flow;
   // Proxy: CFO + CFI (CFI biasanya negatif = capex)
@@ -36,9 +46,8 @@ export function analisisKuantitatif(emiten) {
   let growthPendapatan = null;
   let growthLaba = null;
   if (laporan.length >= 2) {
-    const periode = laporan[laporan.length - 1].tahun - laporan[0].tahun;
-    growthPendapatan = cagr(laporan[0].pendapatan, laporan[laporan.length - 1].pendapatan, periode);
-    growthLaba = cagr(laporan[0].laba_bersih, laporan[laporan.length - 1].laba_bersih, periode);
+    growthPendapatan = cagrSeri(laporan, (l) => l.pendapatan);
+    growthLaba = cagrSeri(laporan, (l) => l.laba_bersih);
   }
 
   return {
@@ -66,21 +75,41 @@ function relativeValuation(emiten) {
   const fvPer = p.mean_per_3y && eps ? p.mean_per_3y * eps : null;
   const fvPbv = p.mean_pbv_3y && bvps ? p.mean_pbv_3y * bvps : null;
   const tersedia = [fvPer, fvPbv].filter((x) => x != null);
-  const fairValue = tersedia.length ? tersedia.reduce((a, b) => a + b, 0) / tersedia.length : null;
+  let fairValue = tersedia.length ? tersedia.reduce((a, b) => a + b, 0) / tersedia.length : null;
+  let metodeFv = fairValue ? "Mean PER & PBV (historis emiten)" : null;
+
+  const hargaWajarPer = p.per_sektor && eps ? p.per_sektor * eps : null;
+  const hargaWajarPbv = p.pbv_sektor && bvps ? p.pbv_sektor * bvps : null;
+
+  // Fallback agar nilai wajar tetap terisi walau Mean PER/PBV & data sektor kosong.
+  if (fairValue == null) {
+    // 1) Justified P/B berbasis ROE (Gordon): P/B wajar = (ROE - g)/(r - g).
+    const roe = bagi(lap.laba_bersih, lap.total_ekuitas);
+    const r = p.discount_rate ?? 0.11, g = p.terminal_growth ?? 0.03;
+    if (roe != null && bvps && r > g && roe > g) {
+      const fvJust = ((roe - g) / (r - g)) * bvps;
+      if (fvJust > 0) { fairValue = fvJust; metodeFv = "Justified P/B berbasis ROE (Gordon)"; }
+    }
+    if (fairValue == null) {
+      const ws = [hargaWajarPer, hargaWajarPbv].filter((x) => x != null && x > 0);
+      if (ws.length) { fairValue = ws.reduce((a, b) => a + b, 0) / ws.length; metodeFv = "Rata-rata harga wajar sektor (PER/PBV)"; }
+    }
+  }
   const mosFair = fairValue ? (fairValue - p.harga_saham) / fairValue : null;
 
   return {
     eps, bvps, per, pbv,
     per_sektor: p.per_sektor ?? null,
     pbv_sektor: p.pbv_sektor ?? null,
-    harga_wajar_per: p.per_sektor && eps ? p.per_sektor * eps : null,
-    harga_wajar_pbv: p.pbv_sektor && bvps ? p.pbv_sektor * bvps : null,
+    harga_wajar_per: hargaWajarPer,
+    harga_wajar_pbv: hargaWajarPbv,
     mean_per: p.mean_per_3y ?? null,
     mean_pbv: p.mean_pbv_3y ?? null,
     fair_value_per: fvPer,
     fair_value_pbv: fvPbv,
     fair_value: fairValue,
     mos_fair_value: mosFair,
+    metode_fair_value: metodeFv,
   };
 }
 
@@ -120,9 +149,10 @@ function absoluteValuation(emiten) {
 export function proyeksiTahunDepan(emiten, nTahun = 3) {
   const lap = [...emiten.laporan].sort((a, b) => a.tahun - b.tahun);
   if (lap.length < 2) return { cagr_pendapatan: null, cagr_laba: null, proyeksi: [] };
-  const periode = lap.at(-1).tahun - lap[0].tahun;
-  const gPend = cagr(lap[0].pendapatan, lap.at(-1).pendapatan, periode);
-  const gLaba = cagr(lap[0].laba_bersih, lap.at(-1).laba_bersih, periode);
+  const gPend = cagrSeri(lap, (l) => l.pendapatan);
+  const gLaba = cagrSeri(lap, (l) => l.laba_bersih);
+  // Tanpa sinyal pertumbuhan, proyeksi hanya akan datar & menyesatkan.
+  if (gPend == null && gLaba == null) return { cagr_pendapatan: null, cagr_laba: null, proyeksi: [] };
   const t = lap.at(-1);
   let pend = t.pendapatan, laba = t.laba_bersih;
   const proyeksi = [];
@@ -150,7 +180,7 @@ export function ramalanHarga(emiten, proyeksi, valu) {
     const ws = [rel.harga_wajar_per, rel.harga_wajar_pbv].filter((x) => x != null);
     const sektorAvg = ws.length ? ws.reduce((a, b) => a + b, 0) / ws.length : null;
     const kandidat = [
-      [rel.fair_value, "Fair Value (Mean PER & PBV)"],
+      [rel.fair_value, rel.metode_fair_value || "Fair Value"],
       [valu.absolute.nilai_intrinsik_per_saham, "Nilai intrinsik DCF"],
       [sektorAvg, "Harga wajar rata-rata sektor (PER/PBV)"],
     ];

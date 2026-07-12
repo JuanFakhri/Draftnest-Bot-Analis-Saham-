@@ -11,6 +11,7 @@ from dataclasses import dataclass
 from typing import TYPE_CHECKING, Optional
 
 from .models import Emiten
+from .ratios import cagr_seri
 
 if TYPE_CHECKING:  # hanya untuk anotasi; hindari impor saat runtime
     from .valuation import HasilValuasi
@@ -51,21 +52,18 @@ class RamalanHarga:
     cagr_harga: Optional[float]       # CAGR harga dari sekarang ke target tahun akhir
 
 
-def _cagr(awal: float, akhir: float, periode: int) -> Optional[float]:
-    if periode <= 0 or awal <= 0 or akhir <= 0:
-        return None
-    return (akhir / awal) ** (1 / periode) - 1
-
-
 def proyeksi_tahun_depan(emiten: Emiten, n_tahun: int = 3) -> HasilProyeksi:
     """Proyeksikan `n_tahun` ke depan dari laporan historis (butuh >= 2 tahun)."""
     lap = emiten.laporan_urut()
     if len(lap) < 2:
         return HasilProyeksi(cagr_pendapatan=None, cagr_laba=None, proyeksi=[])
 
-    periode = lap[-1].tahun - lap[0].tahun
-    g_pend = _cagr(lap[0].pendapatan, lap[-1].pendapatan, periode)
-    g_laba = _cagr(lap[0].laba_bersih, lap[-1].laba_bersih, periode)
+    g_pend = cagr_seri(lap, lambda l: l.pendapatan)
+    g_laba = cagr_seri(lap, lambda l: l.laba_bersih)
+
+    # Tanpa sinyal pertumbuhan sama sekali, proyeksi hanya akan datar & menyesatkan.
+    if g_pend is None and g_laba is None:
+        return HasilProyeksi(cagr_pendapatan=None, cagr_laba=None, proyeksi=[])
 
     terakhir = lap[-1]
     pend = terakhir.pendapatan
@@ -118,7 +116,7 @@ def ramalan_harga(
         wajar_sektor = [x for x in (rel.harga_wajar_per, rel.harga_wajar_pbv) if x is not None]
         sektor_avg = sum(wajar_sektor) / len(wajar_sektor) if wajar_sektor else None
         kandidat = [
-            (rel.fair_value, "Fair Value (Mean PER & PBV)"),
+            (rel.fair_value, rel.metode_fair_value or "Fair Value"),
             (valu.absolute.nilai_intrinsik_per_saham, "Nilai intrinsik DCF"),
             (sektor_avg, "Harga wajar rata-rata sektor (PER/PBV)"),
         ]

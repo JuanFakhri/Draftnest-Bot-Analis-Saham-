@@ -136,6 +136,7 @@ def fetch_emiten(kode: str, tahun_maks: int = 5) -> Emiten:
     saham = info.get("sharesOutstanding")
     if harga and saham:
         mean_per, mean_pbv = _mean_per_pbv(tkr, laporan, float(saham), n=3)
+        div_yield, div_ps, div_streak = _dividen(tkr, float(harga), info)
         pasar = DataPasar(
             harga_saham=float(harga),
             saham_beredar=float(saham),
@@ -143,6 +144,9 @@ def fetch_emiten(kode: str, tahun_maks: int = 5) -> Emiten:
             pbv_sektor=None,
             mean_per_3y=mean_per,
             mean_pbv_3y=mean_pbv,
+            dividend_yield=div_yield,
+            dividen_per_saham=div_ps,
+            dividen_beruntun=div_streak,
         )
 
     if not laporan and pasar is None:
@@ -159,6 +163,46 @@ def _safe(fn):
         return fn()
     except Exception:
         return None
+
+
+def _dividen(tkr, harga: float, info: dict):
+    """Yield dividen 12 bln terakhir + jumlah tahun beruntun membagi dividen.
+
+    Kembalikan (yield_fraksi, dividen_per_saham_12bln, tahun_beruntun).
+    Prioritas dari histori `tkr.dividends` (paling akurat); fallback ke
+    `info['dividendYield']`. None/0 bila tak membagi dividen.
+    """
+    div_ps = None
+    streak = 0
+    try:
+        divs = tkr.dividends  # pandas Series indexed by tanggal pembayaran
+        if divs is not None and not divs.empty:
+            import pandas as pd  # noqa: F401  (yfinance sudah menariknya)
+            per_tahun: dict[int, float] = {}
+            for idx, val in divs.items():
+                per_tahun[int(idx.year)] = per_tahun.get(int(idx.year), 0.0) + float(val)
+            # Dividen per saham 12 bln terakhir = total tahun kalender terakhir yg ada.
+            if per_tahun:
+                tahun_terakhir = max(per_tahun)
+                div_ps = per_tahun.get(tahun_terakhir)
+                # Hitung beruntun mundur dari tahun terakhir (izinkan mulai dari
+                # tahun lalu bila tahun berjalan belum bagikan).
+                mulai = tahun_terakhir
+                t = mulai
+                while per_tahun.get(t, 0.0) > 0:
+                    streak += 1
+                    t -= 1
+    except Exception:
+        div_ps = None
+
+    div_yield = (div_ps / harga) if (div_ps and harga) else None
+    # Fallback yield dari info bila histori kosong.
+    if div_yield is None:
+        raw = info.get("dividendYield") or info.get("trailingAnnualDividendYield")
+        if raw:
+            # Yahoo kadang memberi 8.0 (persen) kadang 0.08 (fraksi).
+            div_yield = raw / 100.0 if raw > 1 else float(raw)
+    return div_yield, div_ps, streak
 
 
 def _mean_per_pbv(tkr, laporan, saham: float, n: int = 3):

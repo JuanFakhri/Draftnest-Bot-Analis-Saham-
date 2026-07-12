@@ -61,6 +61,9 @@ def _pasar(d: dict[str, Any]) -> DataPasar:
         discount_rate=float(d.get("discount_rate", 0.11)),
         terminal_growth=float(d.get("terminal_growth", 0.03)),
         tahun_proyeksi=int(d.get("tahun_proyeksi", 5)),
+        dividend_yield=d.get("dividend_yield"),
+        dividen_per_saham=d.get("dividen_per_saham"),
+        dividen_beruntun=int(d.get("dividen_beruntun", 0) or 0),
     )
 
 

@@ -160,17 +160,13 @@ def skor_kualitatif(kuant: R.RingkasanKuantitatif) -> dict[str, Any]:
     mo_s, mo_j = _skor_keunggulan_kompetitif(kuant)
     pi_s, pi_j = _skor_prospek_industri(kuant)
 
-    hasil: dict[str, Any] = {}
-    if mb_s is not None:
-        hasil["model_bisnis"] = {"skor": mb_s, "justifikasi": mb_j}
-    if mn_s is not None:
-        hasil["manajemen"] = {"skor": mn_s, "justifikasi": mn_j}
-    if mo_s is not None:
-        hasil["keunggulan_kompetitif"] = {"skor": mo_s, "justifikasi": mo_j}
-    if pi_s is not None:
-        hasil["prospek_industri"] = {"skor": pi_s, "justifikasi": pi_j}
-
-    skor_ada = [d["skor"] for d in hasil.values() if isinstance(d, dict)]
+    hasil: dict[str, Any] = {
+        "model_bisnis": {"skor": mb_s, "justifikasi": mb_j},
+        "manajemen": {"skor": mn_s, "justifikasi": mn_j},
+        "keunggulan_kompetitif": {"skor": mo_s, "justifikasi": mo_j},
+        "prospek_industri": {"skor": pi_s, "justifikasi": pi_j},
+    }
+    skor_ada = [d["skor"] for d in hasil.values() if d["skor"] is not None]
     if skor_ada:
         rata = sum(skor_ada) / len(skor_ada)
         hasil["ringkasan"] = (
@@ -275,17 +271,13 @@ def skor_kuantitatif(ringkasan: R.RingkasanKuantitatif) -> dict[str, Any]:
     lik_s, lik_j = _skor_likuiditas(r)
     tum_s, tum_j = _skor_pertumbuhan(ringkasan)
 
-    hasil: dict[str, Any] = {}
-    if prof_s is not None:
-        hasil["profitabilitas"] = {"skor": prof_s, "justifikasi": prof_j}
-    if solv_s is not None:
-        hasil["solvabilitas"] = {"skor": solv_s, "justifikasi": solv_j}
-    if lik_s is not None:
-        hasil["likuiditas"] = {"skor": lik_s, "justifikasi": lik_j}
-    if tum_s is not None:
-        hasil["pertumbuhan"] = {"skor": tum_s, "justifikasi": tum_j}
-
-    skor_ada = [d["skor"] for d in hasil.values()]
+    hasil: dict[str, Any] = {
+        "profitabilitas": {"skor": prof_s, "justifikasi": prof_j},
+        "solvabilitas": {"skor": solv_s, "justifikasi": solv_j},
+        "likuiditas": {"skor": lik_s, "justifikasi": lik_j},
+        "pertumbuhan": {"skor": tum_s, "justifikasi": tum_j},
+    }
+    skor_ada = [d["skor"] for d in hasil.values() if d["skor"] is not None]
     if skor_ada:
         rata = sum(skor_ada) / len(skor_ada)
         hasil["ringkasan"] = (
@@ -314,8 +306,9 @@ def _skor_relative(v: V.HasilValuasi) -> tuple[Optional[int], str, Optional[str]
             bawah=2,
         )
         status = "undervalued" if mos >= 0.05 else "overvalued" if mos <= -0.05 else "fairvalued"
+        metode = rel.metode_fair_value or "Fair Value"
         just = (
-            f"Fair Value (Mean PER&PBV) {_rp(rel.fair_value)} vs harga {_rp(v.harga_saham)} "
+            f"Nilai wajar {_rp(rel.fair_value)} ({metode}) vs harga {_rp(v.harga_saham)} "
             f"-> Margin of Safety {_pct(mos)}. "
         )
         just += ("Harga di bawah nilai wajar (diskon)." if mos >= 0.05
@@ -370,11 +363,10 @@ def skor_valuasi(v: V.HasilValuasi,
     rel_s, rel_j, rel_status = _skor_relative(v)
     abs_s, abs_j = _skor_absolute(v)
 
-    hasil: dict[str, Any] = {}
-    if rel_s is not None:
-        hasil["relative_valuation"] = {"skor": rel_s, "justifikasi": rel_j}
-    if abs_s is not None:
-        hasil["absolute_valuation"] = {"skor": abs_s, "justifikasi": abs_j}
+    hasil: dict[str, Any] = {
+        "relative_valuation": {"skor": rel_s, "justifikasi": rel_j},
+        "absolute_valuation": {"skor": abs_s, "justifikasi": abs_j},
+    }
 
     # Status keseluruhan: utamakan MoS DCF, lalu status relative.
     status = None
@@ -387,7 +379,8 @@ def skor_valuasi(v: V.HasilValuasi,
         hasil["status"] = status
 
     if hasil:
-        skor_ada = [d["skor"] for d in hasil.values() if isinstance(d, dict) and "skor" in d]
+        skor_ada = [d["skor"] for d in hasil.values()
+                    if isinstance(d, dict) and d.get("skor") is not None]
         rata = sum(skor_ada) / len(skor_ada) if skor_ada else None
         label = {"undervalued": "cenderung undervalued",
                  "overvalued": "cenderung overvalued",

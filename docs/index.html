@@ -51,6 +51,7 @@
   <main class="container">
     <nav class="tabs" role="tablist">
       <button id="tab-analisis" class="tab active" role="tab">🔍 Analisis Saham</button>
+      <button id="tab-screener" class="tab" role="tab">🧭 Screener Saham</button>
       <button id="tab-avgdown" class="tab" role="tab">📉 Average Down</button>
     </nav>
 
@@ -159,6 +160,37 @@
       </p>
     </section>
     </div><!-- /view-analisis -->
+
+    <!-- ================= SCREENER ================= -->
+    <div id="view-screener" hidden>
+      <section class="card">
+        <div class="card-head">
+          <h2>🧭 Screener Saham</h2>
+        </div>
+        <p class="hint">Saring emiten IDX (dari data pra-ambil) yang <b>pertumbuhannya naik tiap tahun</b>,
+          <b>rutin membagi dividen</b> pada rentang yield tertentu, dan <b>prospek jangka panjang bagus</b>
+          (ROE tinggi &amp; konsisten, utang terkendali, ada keunggulan/moat). Deterministik, tanpa AI.</p>
+
+        <fieldset class="group">
+          <legend>Kriteria</legend>
+          <div class="grid grid-3">
+            <label class="inline-check"><input id="sc-naik-pend" type="checkbox" checked /> Pendapatan naik tiap tahun</label>
+            <label class="inline-check"><input id="sc-naik-laba" type="checkbox" checked /> Laba bersih naik tiap tahun</label>
+            <label class="inline-check"><input id="sc-prospek" type="checkbox" checked /> Prospek jangka panjang bagus</label>
+          </div>
+          <div class="grid grid-4">
+            <label>Dividend Yield min (%)<input id="sc-dy-min" type="number" step="any" value="7" /></label>
+            <label>Dividend Yield maks (%)<input id="sc-dy-maks" type="number" step="any" value="15" /></label>
+            <label>Dividen beruntun min (th)<input id="sc-dy-streak" type="number" step="1" value="3" /></label>
+            <label>Skor akhir min<input id="sc-skor-min" type="number" step="any" placeholder="mis. 7" /></label>
+          </div>
+          <label class="inline-check"><input id="sc-abaikan-dividen" type="checkbox" /> Abaikan filter dividen (bila data dividen belum tersedia)</label>
+        </fieldset>
+
+        <p id="sc-status" class="status" role="status" aria-live="polite"></p>
+        <div id="sc-result"></div>
+      </section>
+    </div><!-- /view-screener -->
 
     <!-- ================= AVERAGE DOWN ================= -->
     <div id="view-avgdown" hidden>

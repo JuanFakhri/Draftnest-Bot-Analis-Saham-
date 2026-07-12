@@ -313,5 +313,8 @@ def emiten_ke_dict(emiten: Emiten) -> dict[str, Any]:
             "mean_per_3y": m.mean_per_3y, "mean_pbv_3y": m.mean_pbv_3y,
             "growth_rate": m.growth_rate, "discount_rate": m.discount_rate,
             "terminal_growth": m.terminal_growth, "tahun_proyeksi": m.tahun_proyeksi,
+            "dividend_yield": m.dividend_yield,
+            "dividen_per_saham": m.dividen_per_saham,
+            "dividen_beruntun": m.dividen_beruntun,
         }
     return out

@@ -33,6 +33,7 @@ matematika keuangan dihitung di JavaScript, dan interpretasi 3 pilar memanggil
 - **Ambil Data Otomatis** — ketik kode emiten → profil + 5 tahun laporan + harga terisi otomatis
 - **Grafik tren rasio** (ROE/ROA/Net Margin) — SVG interaktif dengan crosshair + tooltip
 - **Menu Average Down** — kalkulator harga rata-rata setelah average down, untung/rugi, risiko porto, + simulasi lot untuk turunkan rata-rata ke target
+- **Screener Saham** — saring emiten yang pertumbuhannya naik tiap tahun, rutin bagi dividen (yield 7–15%, dapat diatur), dan prospek jangka panjang bagus (ROE tinggi/konsisten, utang terkendali, moat). Deterministik, tanpa AI
 - **Fair Value (Mean PER & PBV)** — harga wajar dari rata-rata PER/PBV historis emiten + Margin of Safety
 - **Proyeksi tahun mendatang** (CAGR) — pendapatan, laba, margin
 - **Ramalan Harga Saham** — nilai wajar saat ini + target harga tiap tahun (EPS proyeksi × kelipatan P/E) + potensi upside/downside & CAGR harga. Deterministik, tanpa AI.
@@ -239,6 +240,7 @@ draftnest/
   ratios.py        # Pilar 2: hitung rasio (data olahan) — deterministik
   valuation.py     # Pilar 3: PER/PBV (relative) + DCF (absolute) — deterministik
   scoring.py       # skor + rekomendasi deterministik (tanpa AI) untuk 3 pilar (kualitatif/kuantitatif/valuasi)
+  screener.py      # ringkas metrik & saring emiten (pertumbuhan naik, dividen, prospek) -> screener.json
   client.py        # pembungkus Anthropic Claude API (structured output)
   analyzers/
     kualitatif.py  # Pilar 1: prompt 4 poin kualitatif
@@ -253,6 +255,7 @@ docs/              # website statis (GitHub Pages)
   css/styles.css   # tema elegan + mode siang/malam
   js/finance.js    # port matematika keuangan ke browser
   js/scoring.js    # port skoring deterministik (tanpa AI) ke browser
+  js/screener.js   # Screener saham (muat screener.json, saring di browser)
   js/claude.js     # panggilan Claude API dari browser (3 pilar)
   js/chart.js      # grafik tren rasio (SVG interaktif)
   js/idx-price.js  # ambil harga IDX real-time via CORS-proxy

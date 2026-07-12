@@ -77,9 +77,14 @@ class TestValuasi(unittest.TestCase):
         self.assertIsNone(r.fair_value_per)
         self.assertAlmostEqual(r.fair_value, r.fair_value_pbv, places=6)
 
-    def test_tanpa_mean_fair_value_none(self):
+    def test_tanpa_mean_pakai_fallback_justified(self):
+        # Tanpa Mean PER/PBV & data sektor, nilai wajar tetap terisi via
+        # fallback Justified P/B berbasis ROE (Gordon).
         r = V.analisis_valuasi(emiten_contoh()).relative
-        self.assertIsNone(r.fair_value)  # fixture tak punya mean_per/pbv
+        self.assertIsNone(r.fair_value_per)   # mean tak tersedia
+        self.assertIsNotNone(r.fair_value)    # tapi fallback mengisi
+        self.assertEqual(r.metode_fair_value, "Justified P/B berbasis ROE (Gordon)")
+        self.assertGreater(r.fair_value, 0)
 
     def test_tanpa_pasar_error(self):
         e = Emiten(profil=ProfilEmiten(kode="X", nama="X", sektor="s"),
