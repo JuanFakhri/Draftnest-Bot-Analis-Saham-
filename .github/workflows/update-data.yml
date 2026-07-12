@@ -1,17 +1,22 @@
 name: Perbarui Data Emiten
 
-# Ambil data emiten (profil + 5 tahun laporan + harga) via yfinance dan
-# commit ke docs/data/ agar website bisa auto-isi instan.
-# - Terjadwal: setiap hari 22:00 UTC (~05:00 WIB)
-# - Manual: workflow_dispatch, opsional isi daftar kode (spasi-pisah)
+# Ambil data emiten (profil + laporan + harga) via yfinance TANPA API key,
+# dan commit ke docs/data/ agar website bisa auto-isi instan.
+# - Terjadwal: setiap hari 22:00 UTC (~05:00 WIB) -> seluruh IDX (--all --resume)
+# - Manual: workflow_dispatch dengan pilihan mode.
 
 on:
   schedule:
     - cron: "0 22 * * *"
   workflow_dispatch:
     inputs:
+      mode:
+        description: "Mode pengambilan"
+        type: choice
+        options: ["all-resume", "all-refresh", "watchlist", "tickers", "list-only"]
+        default: "all-resume"
       tickers:
-        description: "Kode emiten (spasi-pisah). Kosong = pakai data/watchlist.txt"
+        description: "Kode emiten (spasi-pisah) — hanya untuk mode 'tickers'"
         required: false
         default: ""
 
@@ -25,6 +30,7 @@ concurrency:
 jobs:
   fetch:
     runs-on: ubuntu-latest
+    timeout-minutes: 330
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-python@v5
@@ -33,13 +39,21 @@ jobs:
       - name: Install dependensi data
         run: pip install -r requirements-data.txt
       - name: Ambil data emiten
-        run: python -m draftnest.pipeline ${{ github.event.inputs.tickers }}
+        run: |
+          MODE="${{ github.event.inputs.mode }}"
+          case "$MODE" in
+            all-refresh) python -m draftnest.pipeline --all --delay 0.5 ;;
+            watchlist)   python -m draftnest.pipeline ;;
+            tickers)     python -m draftnest.pipeline ${{ github.event.inputs.tickers }} ;;
+            list-only)   python -m draftnest.pipeline --all --list-only ;;
+            *)           python -m draftnest.pipeline --all --resume --delay 0.5 ;;
+          esac
       - name: Commit perubahan data
         run: |
           git config user.name "github-actions[bot]"
           git config user.email "github-actions[bot]@users.noreply.github.com"
-          if [ -n "$(git status --porcelain docs/data)" ]; then
-            git add docs/data
+          if [ -n "$(git status --porcelain docs/data data/idx_tickers.txt)" ]; then
+            git add docs/data data/idx_tickers.txt
             git commit -m "data: perbarui data emiten (otomatis)"
             git push
           else

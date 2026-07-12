@@ -55,16 +55,28 @@ cd docs && python -m http.server 8000   # buka http://localhost:8000
 
 Website mengisi data otomatis dari **dua sumber** (sesuai kendala CORS/auth IDX):
 
-1. **Pipeline GitHub Actions + yfinance** (utama, andal, tanpa API key)
-   - Workflow [`update-data.yml`](.github/workflows/update-data.yml) mengambil
-     data server-side untuk daftar emiten di [`data/watchlist.txt`](data/watchlist.txt),
-     menulis `docs/data/<kode>.json` + `index.json`, lalu commit ke repo.
-   - Terjadwal harian + bisa dipicu manual (workflow_dispatch, isi kode).
-   - Website memuat JSON pra-ambil → **ketik kode → langsung terisi**.
-   - Jalankan lokal: `pip install -r requirements-data.txt && python -m draftnest.pipeline BBCA TLKM`
+1. **Pipeline GitHub Actions + yfinance** (utama, andal, **tanpa API key**)
+   - Bisa pra-ambil **SELURUH emiten IDX (~965)** — daftar kode diambil dari CSV
+     "Daftar Saham IDX" publik di GitHub ([`idx_universe.py`](draftnest/idx_universe.py);
+     endpoint resmi IDX memblokir IP Actions), lalu tiap emiten diambil via yfinance.
+   - Workflow [`update-data.yml`](.github/workflows/update-data.yml) menulis
+     `docs/data/<kode>.json` + `index.json` dan commit ke repo. Mode: `all-resume`
+     (default, isi bertahap), `all-refresh`, `watchlist`, `tickers`, `list-only`.
+   - Terjadwal harian + bisa dipicu manual (Actions → Run workflow).
+   - Website memuat JSON pra-ambil → **ketik kode apa pun → langsung terisi, tanpa key**.
+   - Jalankan lokal: `pip install -r requirements-data.txt && python -m draftnest.pipeline --all --resume`
 2. **Fallback live (Financial Modeling Prep)** — untuk emiten di luar watchlist.
    Isi **API key FMP gratis** di ⚙️ Pengaturan; website fetch langsung dari browser.
-   Kuota harian terbatas & cakupan IDX bervariasi.
+   Tanpa key, tombol tetap mengisi **harga live** (Yahoo) + memberi arahan.
+
+**Menambah emiten:** edit [`data/watchlist.txt`](data/watchlist.txt), lalu jalankan
+workflow **Perbarui Data Emiten** (Actions → Run workflow, atau isi kode di input
+`tickers`) — data JSON akan di-commit & website langsung bisa auto-isi.
+
+> ⚠️ **Catatan mata uang:** sebagian emiten IDX (mis. POWR) melaporkan keuangan
+> dalam USD sementara harga dalam IDR. Rasio (ROE/ROA/margin) tetap valid, tetapi
+> valuasi per-saham (EPS/PER/PBV/DCF) tidak akurat tanpa konversi kurs — fetcher
+> menandai kondisi ini otomatis.
 
 **Fair Value (Mean PER & PBV):** metode harga wajar berbasis rata-rata PER/PBV
 historis emiten sendiri (3 tahun), bukan rata-rata sektor:

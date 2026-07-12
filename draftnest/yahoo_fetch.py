@@ -71,12 +71,26 @@ def fetch_emiten(kode: str, tahun_maks: int = 5) -> Emiten:
     except Exception:
         info = {}
 
+    # Deteksi ketidaksesuaian mata uang: banyak emiten IDX (mis. POWR) melaporkan
+    # keuangan dalam USD sementara harga dalam IDR. Rasio (ROE/ROA/margin) tetap
+    # valid, tetapi valuasi per-saham (EPS/PER/PBV/DCF) jadi tidak akurat.
+    fin_cur = (info.get("financialCurrency") or "").upper()
+    price_cur = (info.get("currency") or "").upper()
+    catatan = ""
+    if fin_cur and price_cur and fin_cur != price_cur:
+        catatan = (
+            f"⚠️ Laporan keuangan dalam {fin_cur}, harga dalam {price_cur}. "
+            f"Rasio (ROE/ROA/margin) tetap valid, tetapi valuasi per-saham "
+            f"(EPS/PER/PBV/DCF) tidak akurat tanpa konversi kurs."
+        )
+
     profil = ProfilEmiten(
         kode=kode,
         nama=info.get("longName") or info.get("shortName") or kode,
         sektor=info.get("sector", "") or "",
         sub_sektor=info.get("industry", "") or "",
         deskripsi_bisnis=info.get("longBusinessSummary", "") or "",
+        berita_terkini=catatan,
     )
 
     income = _safe(lambda: tkr.income_stmt)
@@ -111,6 +125,10 @@ def fetch_emiten(kode: str, tahun_maks: int = 5) -> Emiten:
             arus_kas_pendanaan=_pick(cashflow, _CASHFLOW["arus_kas_pendanaan"], col) or 0.0,
             free_cash_flow=_pick(cashflow, _CASHFLOW["free_cash_flow"], col),
         )
+        # Lewati tahun "hantu" (kolom ada di satu statement tetapi nilainya kosong)
+        # — mis. tahun tertua yfinance yang semua angka intinya nol.
+        if lap.total_aset == 0 and lap.pendapatan == 0 and lap.total_ekuitas == 0:
+            continue
         laporan.append(lap)
 
     pasar: Optional[DataPasar] = None
