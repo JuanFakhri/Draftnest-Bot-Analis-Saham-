@@ -192,18 +192,32 @@ $("btn-autofetch").addEventListener("click", async () => {
     let data = await muatPraAmbil(kode);
     let sumber = "data pra-ambil (pipeline)";
     if (!data || !(data.laporan && data.laporan.length)) {
-      // Fallback live via FMP (butuh key).
       const fmpKey = localStorage.getItem("draftnest-fmp");
-      note.textContent = `Tidak ada di data pra-ambil. Mencoba FMP live…`;
-      data = await fetchFMP(kode, fmpKey);
-      sumber = "FMP (live)";
+      if (fmpKey) {
+        note.textContent = `Tidak ada di data pra-ambil. Mencoba FMP live…`;
+        data = await fetchFMP(kode, fmpKey);
+        sumber = "FMP (live)";
+      } else {
+        // Tanpa key: minimal isi harga live (Yahoo, tanpa key) + beri arahan.
+        $("p-kode").value = kode;
+        let hargaMsg = "";
+        try {
+          const { harga, mata_uang } = await ambilHargaIDX(kode);
+          $("m-harga").value = harga;
+          hargaMsg = `Harga live ${mata_uang} ${harga.toLocaleString("id-ID")} terisi. `;
+        } catch (_) { /* harga live gagal — abaikan */ }
+        note.textContent =
+          `⚠️ ${kode} belum ada di data pra-ambil & API key FMP belum diisi. ${hargaMsg}` +
+          `Untuk laporan keuangan otomatis: isi API key FMP di ⚙️ Pengaturan, ` +
+          `atau minta ${kode} ditambahkan ke watchlist pipeline. Anda juga bisa isi manual / Muat Contoh.`;
+        return;
+      }
     }
     isiForm(data);
     const nTahun = (data.laporan || []).length;
     note.textContent = `✓ ${data.profil?.nama || kode} — ${nTahun} tahun laporan (${sumber}). ` +
       (data.pasar ? "" : "Lengkapi harga & saham beredar. ") +
       "Lengkapi PER/PBV sektor untuk harga wajar relatif.";
-    // Auto-analisa.
     if (nTahun >= 1) {
       const autoAI = $("auto-ai").checked && localStorage.getItem("draftnest-key");
       await jalankan(Boolean(autoAI));

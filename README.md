@@ -64,7 +64,16 @@ Website mengisi data otomatis dari **dua sumber** (sesuai kendala CORS/auth IDX)
    - Jalankan lokal: `pip install -r requirements-data.txt && python -m draftnest.pipeline BBCA TLKM`
 2. **Fallback live (Financial Modeling Prep)** — untuk emiten di luar watchlist.
    Isi **API key FMP gratis** di ⚙️ Pengaturan; website fetch langsung dari browser.
-   Kuota harian terbatas & cakupan IDX bervariasi.
+   Tanpa key, tombol tetap mengisi **harga live** (Yahoo) + memberi arahan.
+
+**Menambah emiten:** edit [`data/watchlist.txt`](data/watchlist.txt), lalu jalankan
+workflow **Perbarui Data Emiten** (Actions → Run workflow, atau isi kode di input
+`tickers`) — data JSON akan di-commit & website langsung bisa auto-isi.
+
+> ⚠️ **Catatan mata uang:** sebagian emiten IDX (mis. POWR) melaporkan keuangan
+> dalam USD sementara harga dalam IDR. Rasio (ROE/ROA/margin) tetap valid, tetapi
+> valuasi per-saham (EPS/PER/PBV/DCF) tidak akurat tanpa konversi kurs — fetcher
+> menandai kondisi ini otomatis.
 
 **Fair Value (Mean PER & PBV):** metode harga wajar berbasis rata-rata PER/PBV
 historis emiten sendiri (3 tahun), bukan rata-rata sektor:

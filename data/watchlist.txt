@@ -1,12 +1,22 @@
 # Daftar emiten IDX yang di-pra-ambil pipeline (satu kode per baris).
 # Tambah/kurangi kode di sini; komentar dengan '#'.
+# Setelah edit, jalankan workflow "Perbarui Data Emiten" (Actions -> Run workflow)
+# atau tunggu jadwal harian agar data JSON diperbarui.
 BBCA
 BBRI
 BMRI
+BBNI
 TLKM
 ASII
 ICBP
-UNVR
 INDF
+UNVR
 GOTO
-BBNI
+ANTM
+ADRO
+PGAS
+POWR
+PTBA
+KLBF
+SMGR
+JPFA
