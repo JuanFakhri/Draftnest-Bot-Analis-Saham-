@@ -29,6 +29,13 @@ class RelativeValuation:
     # harga wajar tersirat dari rata-rata sektor
     harga_wajar_per: Optional[float]
     harga_wajar_pbv: Optional[float]
+    # Fair Value (Mean PER & PBV) — metode rata-rata historis emiten sendiri
+    mean_per: Optional[float]
+    mean_pbv: Optional[float]
+    fair_value_per: Optional[float]      # Mean PER x EPS
+    fair_value_pbv: Optional[float]      # Mean PBV x BVPS
+    fair_value: Optional[float]          # rata-rata kedua fair value
+    mos_fair_value: Optional[float]      # margin of safety thd fair value
 
 
 @dataclass
@@ -68,10 +75,24 @@ def _relative(emiten: Emiten) -> RelativeValuation:
     harga_wajar_per = (pasar.per_sektor * eps) if (pasar.per_sektor and eps) else None
     harga_wajar_pbv = (pasar.pbv_sektor * bvps) if (pasar.pbv_sektor and bvps) else None
 
+    # Fair Value (Mean PER & PBV) — studi kasus MAHA:
+    #   Fair Value P/E  = Mean PER (3thn) x EPS
+    #   Fair Value PBV  = Mean PBV (3thn) x BVPS
+    #   Fair Value      = rata-rata dari fair value yang tersedia
+    #   Margin of Safety= (Fair Value - Harga) / Fair Value
+    fv_per = (pasar.mean_per_3y * eps) if (pasar.mean_per_3y and eps) else None
+    fv_pbv = (pasar.mean_pbv_3y * bvps) if (pasar.mean_pbv_3y and bvps) else None
+    tersedia = [x for x in (fv_per, fv_pbv) if x is not None]
+    fair_value = sum(tersedia) / len(tersedia) if tersedia else None
+    mos_fair = ((fair_value - pasar.harga_saham) / fair_value) if fair_value else None
+
     return RelativeValuation(
         eps=eps, bvps=bvps, per=per, pbv=pbv,
         per_sektor=pasar.per_sektor, pbv_sektor=pasar.pbv_sektor,
         harga_wajar_per=harga_wajar_per, harga_wajar_pbv=harga_wajar_pbv,
+        mean_per=pasar.mean_per_3y, mean_pbv=pasar.mean_pbv_3y,
+        fair_value_per=fv_per, fair_value_pbv=fv_pbv,
+        fair_value=fair_value, mos_fair_value=mos_fair,
     )
 
 

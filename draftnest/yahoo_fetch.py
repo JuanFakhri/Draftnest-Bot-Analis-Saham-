@@ -117,11 +117,14 @@ def fetch_emiten(kode: str, tahun_maks: int = 5) -> Emiten:
     harga = info.get("currentPrice") or info.get("regularMarketPrice") or info.get("previousClose")
     saham = info.get("sharesOutstanding")
     if harga and saham:
+        mean_per, mean_pbv = _mean_per_pbv(tkr, laporan, float(saham), n=3)
         pasar = DataPasar(
             harga_saham=float(harga),
             saham_beredar=float(saham),
             per_sektor=None,   # rata-rata sektor tak tersedia dari Yahoo; isi manual
             pbv_sektor=None,
+            mean_per_3y=mean_per,
+            mean_pbv_3y=mean_pbv,
         )
 
     if not laporan and pasar is None:
@@ -138,3 +141,38 @@ def _safe(fn):
         return fn()
     except Exception:
         return None
+
+
+def _mean_per_pbv(tkr, laporan, saham: float, n: int = 3):
+    """Rata-rata PER & PBV `n` tahun terakhir dari harga historis Yahoo.
+
+    Pendekatan: harga rata-rata per tahun kalender (mean close) dibagi EPS/BVPS
+    tahun itu. Saham beredar diasumsikan tetap (aproksimasi wajar). None bila
+    data tak cukup.
+    """
+    if not laporan or saham <= 0:
+        return None, None
+    try:
+        hist = tkr.history(period="6y")
+        if hist is None or hist.empty or "Close" not in hist:
+            return None, None
+        close = hist["Close"]
+        harga_per_tahun = {int(idx.year): float(val) for idx, val in close.groupby(close.index.year).mean().items()}
+    except Exception:
+        return None, None
+
+    pers, pbvs = [], []
+    for lap in sorted(laporan, key=lambda x: x.tahun, reverse=True)[:n]:
+        harga_th = harga_per_tahun.get(lap.tahun)
+        if not harga_th:
+            continue
+        eps = lap.laba_bersih / saham
+        bvps = lap.total_ekuitas / saham
+        if eps > 0:
+            pers.append(harga_th / eps)
+        if bvps > 0:
+            pbvs.append(harga_th / bvps)
+
+    mean_per = sum(pers) / len(pers) if pers else None
+    mean_pbv = sum(pbvs) / len(pbvs) if pbvs else None
+    return mean_per, mean_pbv

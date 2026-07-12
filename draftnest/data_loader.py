@@ -55,6 +55,8 @@ def _pasar(d: dict[str, Any]) -> DataPasar:
         saham_beredar=float(d["saham_beredar"]),
         per_sektor=d.get("per_sektor"),
         pbv_sektor=d.get("pbv_sektor"),
+        mean_per_3y=d.get("mean_per_3y"),
+        mean_pbv_3y=d.get("mean_pbv_3y"),
         growth_rate=float(d.get("growth_rate", 0.08)),
         discount_rate=float(d.get("discount_rate", 0.11)),
         terminal_growth=float(d.get("terminal_growth", 0.03)),

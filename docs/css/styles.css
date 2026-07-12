@@ -227,6 +227,16 @@ table.ratios thead th { color: var(--text-dim); font-weight: 600; }
 .tag.fairvalued { color: var(--warn); background: color-mix(in srgb, var(--warn) 15%, transparent); }
 .tag.overvalued { color: var(--bad); background: color-mix(in srgb, var(--bad) 15%, transparent); }
 
+.fairvalue { margin: 14px 0; border: 1px solid var(--border); border-radius: var(--radius-sm); overflow: hidden; }
+.fv-title { padding: 10px 12px; font-weight: 700; font-size: 14px; background: var(--surface-2);
+  border-bottom: 1px solid var(--border); }
+.fv-table { margin: 0; }
+.fv-table td { text-align: left; padding: 9px 12px; }
+.fv-table td:nth-child(2), .fv-table td:nth-child(4) { text-align: right; font-variant-numeric: tabular-nums; }
+.fv-table td:nth-child(3) { border-left: 1px solid var(--border); color: var(--text-dim); }
+.mos.pos { color: var(--good); }
+.mos.neg { color: var(--bad); }
+
 .disclaimer { font-size: 12px; color: var(--text-dim); margin-top: 18px;
   padding-top: 14px; border-top: 1px solid var(--border); }
 .hint { font-size: 12px; color: var(--text-dim); margin: 4px 0 12px; }

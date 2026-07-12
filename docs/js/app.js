@@ -103,6 +103,8 @@ function bacaEmiten() {
     harga_saham: harga, saham_beredar: saham,
     per_sektor: parseFloat($("m-per").value) || null,
     pbv_sektor: parseFloat($("m-pbv").value) || null,
+    mean_per_3y: parseFloat($("m-meanper").value) || null,
+    mean_pbv_3y: parseFloat($("m-meanpbv").value) || null,
     growth_rate: parseFloat($("m-growth").value) || 0.08,
     discount_rate: parseFloat($("m-discount").value) || 0.11,
     terminal_growth: parseFloat($("m-terminal").value) || 0.03,
@@ -146,6 +148,8 @@ function isiForm(e) {
   $("m-saham").value = m.saham_beredar ?? "";
   $("m-per").value = m.per_sektor ?? "";
   $("m-pbv").value = m.pbv_sektor ?? "";
+  $("m-meanper").value = m.mean_per_3y ?? "";
+  $("m-meanpbv").value = m.mean_pbv_3y ?? "";
   $("m-growth").value = m.growth_rate ?? 0.08;
   $("m-discount").value = m.discount_rate ?? 0.11;
   $("m-terminal").value = m.terminal_growth ?? 0.03;
@@ -403,6 +407,19 @@ function pilarValuasi(valu, llm) {
       <div><span class="k">Nilai Intrinsik (DCF)</span><span>${rp(a.nilai_intrinsik_per_saham)}</span></div>
       <div><span class="k">Margin of Safety</span><span>${pct(valu.margin_of_safety)}</span></div>
     </div>`;
+  if (r.fair_value != null) {
+    s.insertAdjacentHTML("beforeend", `
+      <div class="fairvalue">
+        <div class="fv-title">Fair Value (Mean PER &amp; PBV)</div>
+        <table class="ratios fv-table">
+          <tr><td>Mean P/E (3 Th)</td><td>${numx(r.mean_per)}</td><td>Fair Value P/E</td><td>${rp(r.fair_value_per)}</td></tr>
+          <tr><td>EPS</td><td>${rp(r.eps)}</td><td>Fair Value PBV</td><td>${rp(r.fair_value_pbv)}</td></tr>
+          <tr><td>Mean PBV (3 Th)</td><td>${numx(r.mean_pbv)}</td><td><b>Fair Value</b></td><td><b>${rp(r.fair_value)}</b></td></tr>
+          <tr><td>BVPS</td><td>${rp(r.bvps)}</td><td><b>Harga</b></td><td><b>${rp(valu.harga_saham)}</b></td></tr>
+          <tr><td></td><td></td><td><b>Margin of Safety</b></td><td><b class="mos ${r.mos_fair_value >= 0 ? 'pos' : 'neg'}">${pct(r.mos_fair_value)}</b></td></tr>
+        </table>
+      </div>`);
+  }
   s.appendChild(poinEl(llm, "relative_valuation", "Relative Valuation"));
   s.appendChild(poinEl(llm, "absolute_valuation", "Absolute Valuation"));
   if (llm?.kesimpulan_valuasi) s.insertAdjacentHTML("beforeend", `<div class="summary">${llm.kesimpulan_valuasi}</div>`);
@@ -459,6 +476,12 @@ function buatMarkdown(e, kuant, valu, proyeksi, kualLLM, kuantLLM, valuLLM, skor
     L.push(`- Harga pasar ${rp(valu.harga_saham)} · EPS ${rp(r.eps)}`);
     L.push(`- PER ${numx(r.per)} (sektor ${numx(r.per_sektor)}) · PBV ${numx(r.pbv)} (sektor ${numx(r.pbv_sektor)})`);
     L.push(`- Nilai intrinsik (DCF) ${rp(a.nilai_intrinsik_per_saham)} · Margin of safety ${pct(valu.margin_of_safety)}`);
+    if (r.fair_value != null) {
+      L.push(`\n**Fair Value (Mean PER & PBV):**`);
+      L.push(`- Mean PER ${numx(r.mean_per)} × EPS ${rp(r.eps)} = ${rp(r.fair_value_per)}`);
+      L.push(`- Mean PBV ${numx(r.mean_pbv)} × BVPS ${rp(r.bvps)} = ${rp(r.fair_value_pbv)}`);
+      L.push(`- **Fair Value ${rp(r.fair_value)}** vs Harga ${rp(valu.harga_saham)} → Margin of Safety **${pct(r.mos_fair_value)}**`);
+    }
     L.push(poin(valuLLM, "relative_valuation", "Relative Valuation"));
     L.push(poin(valuLLM, "absolute_valuation", "Absolute Valuation"));
   }

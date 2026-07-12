@@ -76,6 +76,11 @@ class DataPasar:
     per_sektor: Optional[float] = None
     pbv_sektor: Optional[float] = None
 
+    # Rata-rata historis emiten sendiri (mis. 3 tahun) untuk metode
+    # Fair Value (Mean PER & PBV) — lihat studi kasus MAHA.
+    mean_per_3y: Optional[float] = None
+    mean_pbv_3y: Optional[float] = None
+
     # Asumsi untuk Absolute Valuation (DCF)
     growth_rate: float = 0.08        # asumsi pertumbuhan FCF tahap-1
     discount_rate: float = 0.11      # WACC / required return

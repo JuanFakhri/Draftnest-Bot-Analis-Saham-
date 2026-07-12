@@ -310,6 +310,7 @@ def emiten_ke_dict(emiten: Emiten) -> dict[str, Any]:
         out["pasar"] = {
             "harga_saham": m.harga_saham, "saham_beredar": m.saham_beredar,
             "per_sektor": m.per_sektor, "pbv_sektor": m.pbv_sektor,
+            "mean_per_3y": m.mean_per_3y, "mean_pbv_3y": m.mean_pbv_3y,
             "growth_rate": m.growth_rate, "discount_rate": m.discount_rate,
             "terminal_growth": m.terminal_growth, "tahun_proyeksi": m.tahun_proyeksi,
         }

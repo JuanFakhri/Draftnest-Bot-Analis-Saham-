@@ -104,6 +104,16 @@ def format_markdown(h: HasilAnalisis) -> str:
                  f"PBV: {_num(r.pbv)} (sektor {_num(r.pbv_sektor)})")
         L.append(f"- Harga wajar (PER sektor): {_rp(r.harga_wajar_per)} · "
                  f"(PBV sektor): {_rp(r.harga_wajar_pbv)}")
+        if r.fair_value is not None:
+            L.append("")
+            L.append("#### Fair Value (Mean PER & PBV)")
+            L.append("| | | | |")
+            L.append("|---|---|---|---|")
+            L.append(f"| Mean P/E (3 Th) | {_num(r.mean_per)} | Fair Value P/E | {_rp(r.fair_value_per)} |")
+            L.append(f"| EPS | {_rp(r.eps)} | Fair Value PBV | {_rp(r.fair_value_pbv)} |")
+            L.append(f"| Mean PBV (3 Th) | {_num(r.mean_pbv)} | **Fair Value** | **{_rp(r.fair_value)}** |")
+            L.append(f"| BVPS | {_rp(r.bvps)} | **Harga** | **{_rp(v.harga_saham)}** |")
+            L.append(f"| | | **Margin of Safety** | **{_pct(r.mos_fair_value)}** |")
         L.append("")
         L.append("### Absolute Valuation (DCF)")
         L.append(f"- Asumsi: growth {_pct(a.growth_rate)}, discount {_pct(a.discount_rate)}, "

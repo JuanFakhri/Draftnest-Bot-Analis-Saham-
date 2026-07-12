@@ -85,6 +85,7 @@ PER emiten  : {_num(r.per)}   | PER sektor: {_num(r.per_sektor)}
 PBV emiten  : {_num(r.pbv)}   | PBV sektor: {_num(r.pbv_sektor)}
 Harga wajar (PER sektor): {_rp(r.harga_wajar_per)}
 Harga wajar (PBV sektor): {_rp(r.harga_wajar_pbv)}
+Fair Value (Mean PER&PBV): Mean PER {_num(r.mean_per)} x EPS -> {_rp(r.fair_value_per)}; Mean PBV {_num(r.mean_pbv)} x BVPS -> {_rp(r.fair_value_pbv)}; Fair Value {_rp(r.fair_value)} (MoS {_pct(r.mos_fair_value)})
 
 == Absolute Valuation (DCF) ==
 FCF dasar        : {a.fcf_dasar:,.0f}

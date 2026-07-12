@@ -51,6 +51,36 @@ class TestValuasi(unittest.TestCase):
         # r <= gt -> pakai kelipatan konservatif 10x, bukan pembagian negatif
         self.assertAlmostEqual(a.terminal_value, a.fcf_proyeksi[-1] * 10, places=4)
 
+    def test_fair_value_mean_per_pbv(self):
+        # Studi kasus MAHA: EPS=19.1, BVPS=118.5, MeanPER=10.53, MeanPBV=1.79
+        e = Emiten(
+            profil=ProfilEmiten(kode="MAHA", nama="MAHA", sektor="s"),
+            laporan=[laporan(2024, laba_bersih=19.1, total_ekuitas=118.5)],
+            pasar=DataPasar(harga_saham=139, saham_beredar=1,
+                            mean_per_3y=10.53, mean_pbv_3y=1.79),
+        )
+        r = V.analisis_valuasi(e).relative
+        self.assertAlmostEqual(r.fair_value_per, 10.53 * 19.1, places=2)   # ~201.1
+        self.assertAlmostEqual(r.fair_value_pbv, 1.79 * 118.5, places=2)   # ~212.1
+        self.assertAlmostEqual(r.fair_value, (201.123 + 212.115) / 2, places=1)  # ~206.6
+        self.assertAlmostEqual(r.mos_fair_value, (r.fair_value - 139) / r.fair_value, places=4)
+        self.assertAlmostEqual(r.mos_fair_value, 0.327, places=2)          # ~32.7%
+
+    def test_fair_value_hanya_satu_metode(self):
+        # Hanya mean_pbv -> fair value = fair_value_pbv saja
+        e = Emiten(
+            profil=ProfilEmiten(kode="X", nama="X", sektor="s"),
+            laporan=[laporan(2024)],
+            pasar=DataPasar(harga_saham=100, saham_beredar=1, mean_pbv_3y=2.0),
+        )
+        r = V.analisis_valuasi(e).relative
+        self.assertIsNone(r.fair_value_per)
+        self.assertAlmostEqual(r.fair_value, r.fair_value_pbv, places=6)
+
+    def test_tanpa_mean_fair_value_none(self):
+        r = V.analisis_valuasi(emiten_contoh()).relative
+        self.assertIsNone(r.fair_value)  # fixture tak punya mean_per/pbv
+
     def test_tanpa_pasar_error(self):
         e = Emiten(profil=ProfilEmiten(kode="X", nama="X", sektor="s"),
                    laporan=[laporan(2024)], pasar=None)
