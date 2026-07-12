@@ -15,6 +15,95 @@ function skorDariAmbang(nilai, ambang, bawah) {
   return bawah;
 }
 
+// ----------------------------- Kualitatif -----------------------------------
+// Pilar Kualitatif tanpa AI: kualitas bisnis/manajemen/moat/prospek disimpulkan
+// dari sinyal keuangan (margin, ROE, leverage, tren) — bukan narasi LLM.
+
+function stdev(xs) {
+  const n = xs.length;
+  if (n < 2) return 0;
+  const rata = xs.reduce((a, b) => a + b, 0) / n;
+  return Math.sqrt(xs.reduce((a, x) => a + (x - rata) ** 2, 0) / (n - 1));
+}
+
+function skorModelBisnis(kuant) {
+  const r = kuant.rasio_terbaru;
+  const komp = [r.operating_margin, r.net_profit_margin].filter((m) => m != null);
+  if (!komp.length) return [null, "Margin tidak tersedia — model bisnis tak bisa dinilai dari data."];
+  const m = komp.reduce((a, b) => a + b, 0) / komp.length;
+  const skor = skorDariAmbang(m, [[0.25, 9], [0.15, 8], [0.08, 6], [0.03, 5], [0.0, 3]], 1);
+  let just = `Margin operasi ${pct(r.operating_margin)}, margin bersih ${pct(r.net_profit_margin)}. `;
+  if (m >= 0.15) just += "Profitabilitas operasi tinggi — indikasi daya saing harga & efisiensi kuat.";
+  else if (m >= 0.03) just += "Margin sedang — model bisnis menghasilkan laba namun kompetisi terasa.";
+  else just += "Margin tipis/negatif — model bisnis rentan terhadap biaya & persaingan.";
+  return [skor, just];
+}
+
+function skorManajemen(kuant) {
+  const r = kuant.rasio_terbaru;
+  const poin = [];
+  if (r.roe != null) poin.push(skorDariAmbang(r.roe, [[0.20, 10], [0.15, 8], [0.10, 6], [0.05, 4], [0.0, 2]], 1));
+  if (r.roa != null) poin.push(skorDariAmbang(r.roa, [[0.10, 10], [0.07, 8], [0.04, 6], [0.01, 4], [0.0, 2]], 1));
+  if (r.der != null) poin.push(skorDariAmbang(-r.der, [[-0.5, 9], [-1.0, 7], [-2.0, 5], [-3.0, 3]], 1));
+  if (!poin.length) return [null, "ROE/ROA/DER tidak tersedia — kualitas manajemen tak bisa dinilai."];
+  const skor = Math.round(poin.reduce((a, b) => a + b, 0) / poin.length);
+  let just = `ROE ${pct(r.roe)}, ROA ${pct(r.roa)}, DER ${numx(r.der)}. `;
+  if (r.roe != null && r.roe >= 0.15 && (r.der == null || r.der <= 1.0)) just += "Alokasi modal efektif dengan leverage terkendali.";
+  else if (r.der != null && r.der > 2.0) just += "Imbal hasil bergantung pada utang tinggi — risiko manajemen keuangan.";
+  else just += "Efisiensi modal moderat.";
+  return [skor, just];
+}
+
+function skorKeunggulanKompetitif(kuant) {
+  const roes = kuant.rasio_historis.map((x) => x.roe).filter((x) => x != null);
+  const gms = kuant.rasio_historis.map((x) => x.gross_profit_margin).filter((x) => x != null);
+  if (!roes.length && !gms.length) return [null, "Data historis ROE/gross margin kurang — moat tak bisa dinilai."];
+  const meanRoe = roes.length ? roes.reduce((a, b) => a + b, 0) / roes.length : null;
+  const meanGm = gms.length ? gms.reduce((a, b) => a + b, 0) / gms.length : null;
+  const dasar = skorDariAmbang(meanRoe != null ? meanRoe : meanGm,
+    [[0.20, 9], [0.15, 8], [0.10, 6], [0.05, 4], [0.0, 3]], 2) || 2;
+  const konsisten = roes.length >= 3 && stdev(roes) <= 0.03;
+  const skor = Math.min(10, dasar + (konsisten ? 1 : 0));
+  let just = `Rata-rata ROE ${pct(meanRoe)}, gross margin ${pct(meanGm)} selama ${kuant.rasio_historis.length} tahun. `;
+  if (konsisten && dasar >= 8) just += "ROE tinggi & stabil — indikasi keunggulan kompetitif (moat) yang lebar.";
+  else if (dasar >= 6) just += "Profitabilitas cukup baik — ada keunggulan namun perlu diuji ketahanannya.";
+  else just += "Belum tampak keunggulan kompetitif yang kuat dari angka.";
+  return [skor, just];
+}
+
+function skorProspekIndustri(kuant) {
+  const g = kuant.growth_pendapatan;
+  if (g == null) return [null, "Butuh ≥ 2 tahun data untuk menilai tren/prospek industri."];
+  const skor = skorDariAmbang(g, [[0.15, 9], [0.08, 8], [0.04, 6], [0.0, 4]], 2);
+  let just = `Pertumbuhan pendapatan (CAGR) ${pct(g)}. `;
+  if (g >= 0.08) just += "Permintaan tumbuh sehat — prospek industri/emiten positif.";
+  else if (g >= 0.0) just += "Pertumbuhan lambat — prospek stabil namun tak agresif.";
+  else just += "Pendapatan menyusut — indikasi industri/pangsa pasar menantang.";
+  return [skor, just];
+}
+
+export function skorKualitatif(kuant) {
+  const [mbS, mbJ] = skorModelBisnis(kuant);
+  const [mnS, mnJ] = skorManajemen(kuant);
+  const [moS, moJ] = skorKeunggulanKompetitif(kuant);
+  const [piS, piJ] = skorProspekIndustri(kuant);
+
+  const hasil = {};
+  if (mbS != null) hasil.model_bisnis = { skor: mbS, justifikasi: mbJ };
+  if (mnS != null) hasil.manajemen = { skor: mnS, justifikasi: mnJ };
+  if (moS != null) hasil.keunggulan_kompetitif = { skor: moS, justifikasi: moJ };
+  if (piS != null) hasil.prospek_industri = { skor: piS, justifikasi: piJ };
+
+  const skorAda = Object.values(hasil).map((d) => d.skor);
+  if (skorAda.length) {
+    const rata = skorAda.reduce((a, b) => a + b, 0) / skorAda.length;
+    hasil.ringkasan =
+      `Skor kualitatif rata-rata ${rata.toFixed(1)}/10 diperkirakan dari sinyal keuangan ` +
+      `(margin, ROE, leverage, tren) — tanpa AI. ` + moJ;
+  }
+  return hasil;
+}
+
 // ----------------------------- Kuantitatif ----------------------------------
 
 function skorProfitabilitas(r) {

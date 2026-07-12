@@ -5,6 +5,7 @@ from draftnest import ratios as R
 from draftnest import valuation as V
 from draftnest.scoring import (
     analisis_deterministik,
+    skor_kualitatif,
     skor_kuantitatif,
     skor_valuasi,
 )
@@ -60,6 +61,54 @@ class TestSkorKuantitatif(unittest.TestCase):
         self.assertNotIn("pertumbuhan", hasil)
 
 
+class TestSkorKualitatif(unittest.TestCase):
+    def test_bentuk_output_tanpa_ai(self):
+        kuant = R.analisis_kuantitatif(emiten_contoh())
+        hasil = skor_kualitatif(kuant)
+        for field in ("model_bisnis", "manajemen", "keunggulan_kompetitif", "prospek_industri"):
+            self.assertIn(field, hasil)
+            self.assertTrue(1 <= hasil[field]["skor"] <= 10)
+        self.assertIn("ringkasan", hasil)
+
+    def test_prospek_butuh_dua_tahun(self):
+        em = Emiten(
+            profil=ProfilEmiten(kode="XX", nama="X", sektor="S"),
+            laporan=[laporan(2024)],
+        )
+        kuant = R.analisis_kuantitatif(em)
+        hasil = skor_kualitatif(kuant)
+        # Tanpa >=2 tahun, prospek industri (butuh CAGR) tak muncul.
+        self.assertNotIn("prospek_industri", hasil)
+        # Tapi model bisnis (dari margin) tetap ada.
+        self.assertIn("model_bisnis", hasil)
+
+
+class TestRamalanHarga(unittest.TestCase):
+    def test_target_harga_dan_potensi(self):
+        em = emiten_contoh()
+        em.pasar.mean_per_3y = 15.0
+        valu = V.analisis_valuasi(em)
+        proyeksi = F.proyeksi_tahun_depan(em)
+        rh = F.ramalan_harga(em, proyeksi, valu)
+        self.assertIsNotNone(rh)
+        self.assertEqual(rh.harga_sekarang, em.pasar.harga_saham)
+        self.assertTrue(len(rh.target) >= 1)
+        # Setiap target punya EPS & harga; laba tumbuh -> target > 0
+        for t in rh.target:
+            self.assertIsNotNone(t.eps)
+            self.assertIsNotNone(t.target_harga)
+            self.assertGreater(t.target_harga, 0)
+        self.assertIsNotNone(rh.cagr_harga)
+
+    def test_none_tanpa_pasar(self):
+        em = Emiten(
+            profil=ProfilEmiten(kode="XX", nama="X", sektor="S"),
+            laporan=[laporan(2023), laporan(2024)],
+        )
+        proyeksi = F.proyeksi_tahun_depan(em)
+        self.assertIsNone(F.ramalan_harga(em, proyeksi, None))
+
+
 class TestSkorValuasi(unittest.TestCase):
     def test_bentuk_output_mirip_llm(self):
         em = emiten_contoh()
@@ -88,7 +137,8 @@ class TestAnalisisDeterministik(unittest.TestCase):
         kuant = R.analisis_kuantitatif(em)
         valu = V.analisis_valuasi(em)
         proyeksi = F.proyeksi_tahun_depan(em)
-        kuant_skor, valu_skor = analisis_deterministik(em, kuant, valu, proyeksi)
+        kual_skor, kuant_skor, valu_skor = analisis_deterministik(em, kuant, valu, proyeksi)
+        self.assertIn("model_bisnis", kual_skor)
         self.assertIn("profitabilitas", kuant_skor)
         self.assertIsNotNone(valu_skor)
         self.assertIn("status", valu_skor)
@@ -99,7 +149,8 @@ class TestAnalisisDeterministik(unittest.TestCase):
             laporan=[laporan(2023), laporan(2024)],
         )
         kuant = R.analisis_kuantitatif(em)
-        kuant_skor, valu_skor = analisis_deterministik(em, kuant, None, None)
+        kual_skor, kuant_skor, valu_skor = analisis_deterministik(em, kuant, None, None)
+        self.assertIn("model_bisnis", kual_skor)
         self.assertIn("profitabilitas", kuant_skor)
         self.assertIsNone(valu_skor)
 

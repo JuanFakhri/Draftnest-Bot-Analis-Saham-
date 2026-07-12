@@ -53,6 +53,133 @@ def _skor_dari_ambang(nilai: Optional[float], ambang: list[tuple[float, int]],
     return bawah
 
 
+# ----------------------------- Kualitatif -----------------------------------
+# Pilar Kualitatif tanpa AI: kualitas bisnis/manajemen/moat/prospek disimpulkan
+# dari SINYAL keuangan (proxy terukur), bukan narasi LLM. Ini pendekatan
+# "quality investing": moat & manajemen bagus umumnya tercermin pada margin
+# tinggi-stabil, ROE tinggi-konsisten, leverage sehat, dan arus kas positif.
+
+def _stdev(xs: list[float]) -> float:
+    n = len(xs)
+    if n < 2:
+        return 0.0
+    rata = sum(xs) / n
+    return (sum((x - rata) ** 2 for x in xs) / (n - 1)) ** 0.5
+
+
+def _skor_model_bisnis(kuant: R.RingkasanKuantitatif) -> tuple[Optional[int], str]:
+    r = kuant.rasio_terbaru
+    # Model bisnis kuat -> margin operasi & bersih tinggi (pricing power, efisiensi).
+    komponen = [m for m in (r.operating_margin, r.net_profit_margin) if m is not None]
+    if not komponen:
+        return None, "Margin tidak tersedia — model bisnis tak bisa dinilai dari data."
+    m = sum(komponen) / len(komponen)
+    skor = _skor_dari_ambang(m, [(0.25, 9), (0.15, 8), (0.08, 6), (0.03, 5), (0.0, 3)], bawah=1)
+    just = f"Margin operasi {_pct(r.operating_margin)}, margin bersih {_pct(r.net_profit_margin)}. "
+    if m >= 0.15:
+        just += "Profitabilitas operasi tinggi — indikasi daya saing harga & efisiensi kuat."
+    elif m >= 0.03:
+        just += "Margin sedang — model bisnis menghasilkan laba namun kompetisi terasa."
+    else:
+        just += "Margin tipis/negatif — model bisnis rentan terhadap biaya & persaingan."
+    return skor, just
+
+
+def _skor_manajemen(kuant: R.RingkasanKuantitatif) -> tuple[Optional[int], str]:
+    r = kuant.rasio_terbaru
+    # Manajemen dinilai dari efisiensi modal (ROE/ROA) + kehati-hatian leverage (DER).
+    poin: list[int] = []
+    if r.roe is not None:
+        poin.append(_skor_dari_ambang(r.roe, [(0.20, 10), (0.15, 8), (0.10, 6), (0.05, 4), (0.0, 2)], bawah=1))
+    if r.roa is not None:
+        poin.append(_skor_dari_ambang(r.roa, [(0.10, 10), (0.07, 8), (0.04, 6), (0.01, 4), (0.0, 2)], bawah=1))
+    if r.der is not None:
+        poin.append(_skor_dari_ambang(-r.der, [(-0.5, 9), (-1.0, 7), (-2.0, 5), (-3.0, 3)], bawah=1))
+    if not poin:
+        return None, "ROE/ROA/DER tidak tersedia — kualitas manajemen tak bisa dinilai."
+    skor = round(sum(poin) / len(poin))
+    just = f"ROE {_pct(r.roe)}, ROA {_pct(r.roa)}, DER {_num(r.der)}. "
+    if r.roe is not None and r.roe >= 0.15 and (r.der is None or r.der <= 1.0):
+        just += "Alokasi modal efektif dengan leverage terkendali."
+    elif r.der is not None and r.der > 2.0:
+        just += "Imbal hasil bergantung pada utang tinggi — risiko manajemen keuangan."
+    else:
+        just += "Efisiensi modal moderat."
+    return skor, just
+
+
+def _skor_keunggulan_kompetitif(kuant: R.RingkasanKuantitatif) -> tuple[Optional[int], str]:
+    # Moat (parit ekonomi) tercermin pada ROE & gross margin yang TINGGI dan STABIL
+    # selama beberapa tahun (bukan sekali-dua kali).
+    roes = [x.roe for x in kuant.rasio_historis if x.roe is not None]
+    gms = [x.gross_profit_margin for x in kuant.rasio_historis if x.gross_profit_margin is not None]
+    if not roes and not gms:
+        return None, "Data historis ROE/gross margin kurang — moat tak bisa dinilai."
+    mean_roe = sum(roes) / len(roes) if roes else None
+    mean_gm = sum(gms) / len(gms) if gms else None
+    # Skor dasar dari level (ROE lebih diutamakan), lalu bonus konsistensi.
+    dasar = _skor_dari_ambang(
+        mean_roe if mean_roe is not None else mean_gm,
+        [(0.20, 9), (0.15, 8), (0.10, 6), (0.05, 4), (0.0, 3)], bawah=2,
+    ) or 2
+    konsisten = len(roes) >= 3 and _stdev(roes) <= 0.03
+    skor = min(10, dasar + (1 if konsisten else 0))
+    just = (
+        f"Rata-rata ROE {_pct(mean_roe)}, gross margin {_pct(mean_gm)} "
+        f"selama {len(kuant.rasio_historis)} tahun. "
+    )
+    if konsisten and dasar >= 8:
+        just += "ROE tinggi & stabil — indikasi keunggulan kompetitif (moat) yang lebar."
+    elif dasar >= 6:
+        just += "Profitabilitas cukup baik — ada keunggulan namun perlu diuji ketahanannya."
+    else:
+        just += "Belum tampak keunggulan kompetitif yang kuat dari angka."
+    return skor, just
+
+
+def _skor_prospek_industri(kuant: R.RingkasanKuantitatif) -> tuple[Optional[int], str]:
+    # Prospek diproksikan dari tren pertumbuhan pendapatan (permintaan pasar).
+    g = kuant.growth_pendapatan
+    if g is None:
+        return None, "Butuh >= 2 tahun data untuk menilai tren/prospek industri."
+    skor = _skor_dari_ambang(g, [(0.15, 9), (0.08, 8), (0.04, 6), (0.0, 4)], bawah=2)
+    just = f"Pertumbuhan pendapatan (CAGR) {_pct(g)}. "
+    if g >= 0.08:
+        just += "Permintaan tumbuh sehat — prospek industri/emiten positif."
+    elif g >= 0.0:
+        just += "Pertumbuhan lambat — prospek stabil namun tak agresif."
+    else:
+        just += "Pendapatan menyusut — indikasi industri/pangsa pasar menantang."
+    return skor, just
+
+
+def skor_kualitatif(kuant: R.RingkasanKuantitatif) -> dict[str, Any]:
+    """Skor kualitatif deterministik (proxy dari sinyal keuangan, tanpa AI)."""
+    mb_s, mb_j = _skor_model_bisnis(kuant)
+    mn_s, mn_j = _skor_manajemen(kuant)
+    mo_s, mo_j = _skor_keunggulan_kompetitif(kuant)
+    pi_s, pi_j = _skor_prospek_industri(kuant)
+
+    hasil: dict[str, Any] = {}
+    if mb_s is not None:
+        hasil["model_bisnis"] = {"skor": mb_s, "justifikasi": mb_j}
+    if mn_s is not None:
+        hasil["manajemen"] = {"skor": mn_s, "justifikasi": mn_j}
+    if mo_s is not None:
+        hasil["keunggulan_kompetitif"] = {"skor": mo_s, "justifikasi": mo_j}
+    if pi_s is not None:
+        hasil["prospek_industri"] = {"skor": pi_s, "justifikasi": pi_j}
+
+    skor_ada = [d["skor"] for d in hasil.values() if isinstance(d, dict)]
+    if skor_ada:
+        rata = sum(skor_ada) / len(skor_ada)
+        hasil["ringkasan"] = (
+            f"Skor kualitatif rata-rata {rata:.1f}/10 diperkirakan dari sinyal keuangan "
+            f"(margin, ROE, leverage, tren) — tanpa AI. " + mo_j
+        )
+    return hasil
+
+
 # ----------------------------- Kuantitatif ----------------------------------
 
 def _skor_profitabilitas(r: R.RasioKunci) -> tuple[Optional[int], str]:
@@ -286,11 +413,13 @@ def analisis_deterministik(
     kuant: R.RingkasanKuantitatif,
     valu: Optional[V.HasilValuasi],
     proyeksi: Optional[F.HasilProyeksi] = None,
-) -> tuple[dict[str, Any], Optional[dict[str, Any]]]:
-    """Kembalikan (skor_kuantitatif, skor_valuasi) deterministik.
+) -> tuple[dict[str, Any], dict[str, Any], Optional[dict[str, Any]]]:
+    """Kembalikan (skor_kualitatif, skor_kuantitatif, skor_valuasi) deterministik.
 
-    skor_valuasi None bila data pasar/valuasi tak tersedia.
+    Ketiganya dihitung dari data tanpa AI. skor_valuasi None bila data
+    pasar/valuasi tak tersedia.
     """
+    kual_skor = skor_kualitatif(kuant)
     kuant_skor = skor_kuantitatif(kuant)
     valu_skor = skor_valuasi(valu, proyeksi) if valu is not None else None
-    return kuant_skor, valu_skor
+    return kual_skor, kuant_skor, valu_skor
