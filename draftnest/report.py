@@ -34,6 +34,7 @@ class HasilAnalisis:
     kuantitatif_data: R.RingkasanKuantitatif
     proyeksi_data: F.HasilProyeksi
     valuasi_data: Optional[V.HasilValuasi]
+    ramalan_harga: Optional[F.RamalanHarga]
     kualitatif_llm: Optional[dict[str, Any]]
     kuantitatif_llm: Optional[dict[str, Any]]
     valuasi_llm: Optional[dict[str, Any]]
@@ -71,15 +72,15 @@ def jalankan_analisis(emiten: Emiten, client: Optional[ClaudeClient]) -> HasilAn
     kuant = R.analisis_kuantitatif(emiten)
     proyeksi = F.proyeksi_tahun_depan(emiten)
     valu = V.analisis_valuasi(emiten) if emiten.pasar else None
+    ramalan = F.ramalan_harga(emiten, proyeksi, valu)
 
-    # Langkah 2b — skor deterministik dari data (tanpa AI). Ini yang membuat
-    # analisis bisa jalan penuh hanya dari angka bila datanya lengkap.
-    kuant_det, valu_det = S.analisis_deterministik(emiten, kuant, valu, proyeksi)
+    # Langkah 2b — skor deterministik dari data (tanpa AI) untuk KETIGA pilar.
+    # Ini membuat analisis penuh (skor + rekomendasi) berjalan hanya dari angka.
+    kual_det, kuant_det, valu_det = S.analisis_deterministik(emiten, kuant, valu, proyeksi)
 
-    # Langkah 3 — kirim ke Claude (opsional). Kualitatif selalu butuh AI
-    # (naratif). Kuantitatif & valuasi memakai skor deterministik sebagai dasar;
-    # bila client tersedia, hasil LLM menimpa (interpretasi lebih kaya).
-    kual_llm = None
+    # Langkah 3 — Claude opsional untuk MEMPERKAYA narasi. Skor tetap
+    # deterministik sebagai dasar; bila client tersedia, hasil LLM menimpa.
+    kual_llm = kual_det
     kuant_llm = kuant_det
     valu_llm = valu_det
     if client is not None:
@@ -115,6 +116,7 @@ def jalankan_analisis(emiten: Emiten, client: Optional[ClaudeClient]) -> HasilAn
         kuantitatif_data=kuant,
         proyeksi_data=proyeksi,
         valuasi_data=valu,
+        ramalan_harga=ramalan,
         kualitatif_llm=kual_llm,
         kuantitatif_llm=kuant_llm,
         valuasi_llm=valu_llm,

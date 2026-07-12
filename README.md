@@ -34,11 +34,12 @@ matematika keuangan dihitung di JavaScript, dan interpretasi 3 pilar memanggil
 - **Grafik tren rasio** (ROE/ROA/Net Margin) — SVG interaktif dengan crosshair + tooltip
 - **Menu Average Down** — kalkulator harga rata-rata setelah average down, untung/rugi, risiko porto, + simulasi lot untuk turunkan rata-rata ke target
 - **Fair Value (Mean PER & PBV)** — harga wajar dari rata-rata PER/PBV historis emiten + Margin of Safety
-- **Proyeksi tahun mendatang** (CAGR) + **outlook AI** forward-looking
+- **Proyeksi tahun mendatang** (CAGR) — pendapatan, laba, margin
+- **Ramalan Harga Saham** — nilai wajar saat ini + target harga tiap tahun (EPS proyeksi × kelipatan P/E) + potensi upside/downside & CAGR harga. Deterministik, tanpa AI.
 - **Ambil Harga IDX real-time** (Yahoo Finance `.JK` via CORS-proxy, best-effort)
 - Form input ramah + kartu laporan per tahun, **Muat Contoh**, **Impor/Ekspor JSON**
-- **Analisis dari Data (tanpa AI)** (offline, tanpa API key) — skor + rekomendasi Beli/Tahan/Jual dihitung deterministik dari rasio & valuasi. AI hanya diperlukan untuk narasi pilar Kualitatif.
-- **Analisis Lengkap dengan AI** (3 pilar via Claude)
+- **Analisis dari Data (tanpa AI)** (offline, tanpa API key) — skor + rekomendasi Beli/Tahan/Jual dihitung deterministik untuk **ketiga pilar** (Kualitatif juga, dari sinyal keuangan: margin, ROE, leverage, tren). AI sepenuhnya opsional.
+- **Analisis Lengkap dengan AI** (opsional — hanya memperkaya narasi 3 pilar via Claude)
 - Kartu skor per pilar, tabel rasio, rincian DCF, badge rekomendasi
 - **Unduh laporan .md** & cetak
 
@@ -234,10 +235,10 @@ draftnest/
   idx_scraper.py   # ambil data IDX (profil/harga) + parser XBRL laporan keuangan
   yahoo_fetch.py   # ambil profil + 5 tahun laporan + harga via yfinance
   pipeline.py      # pra-ambil data watchlist -> docs/data/*.json (dipakai Actions)
-  forecast.py      # proyeksi tahun mendatang (CAGR)
+  forecast.py      # proyeksi tahun mendatang (CAGR) + ramalan/target harga saham
   ratios.py        # Pilar 2: hitung rasio (data olahan) — deterministik
   valuation.py     # Pilar 3: PER/PBV (relative) + DCF (absolute) — deterministik
-  scoring.py       # skor + rekomendasi deterministik (tanpa AI) dari rasio & valuasi
+  scoring.py       # skor + rekomendasi deterministik (tanpa AI) untuk 3 pilar (kualitatif/kuantitatif/valuasi)
   client.py        # pembungkus Anthropic Claude API (structured output)
   analyzers/
     kualitatif.py  # Pilar 1: prompt 4 poin kualitatif

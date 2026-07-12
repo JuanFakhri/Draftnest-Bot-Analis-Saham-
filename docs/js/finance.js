@@ -137,6 +137,57 @@ export function proyeksiTahunDepan(emiten, nTahun = 3) {
   return { cagr_pendapatan: gPend, cagr_laba: gLaba, proyeksi };
 }
 
+// Ramalan/target harga saham ke depan (port dari draftnest/forecast.py).
+export function ramalanHarga(emiten, proyeksi, valu) {
+  const p = emiten.pasar;
+  if (!p || !p.harga_saham || !p.saham_beredar) return null;
+  const harga = p.harga_saham;
+
+  // 1. Nilai wajar saat ini (pakai kandidat POSITIF pertama).
+  let hargaWajar = null, metodeWajar = "n/a";
+  if (valu) {
+    const rel = valu.relative;
+    const ws = [rel.harga_wajar_per, rel.harga_wajar_pbv].filter((x) => x != null);
+    const sektorAvg = ws.length ? ws.reduce((a, b) => a + b, 0) / ws.length : null;
+    const kandidat = [
+      [rel.fair_value, "Fair Value (Mean PER & PBV)"],
+      [valu.absolute.nilai_intrinsik_per_saham, "Nilai intrinsik DCF"],
+      [sektorAvg, "Harga wajar rata-rata sektor (PER/PBV)"],
+    ];
+    for (const [nilai, metode] of kandidat) {
+      if (nilai != null && nilai > 0) { hargaWajar = nilai; metodeWajar = metode; break; }
+    }
+  }
+  const potensiWajar = hargaWajar ? (hargaWajar - harga) / harga : null;
+
+  // 2. Kelipatan P/E untuk proyeksi ke depan.
+  let multiple = null, metodeMultiple = "n/a";
+  const lap = laporanTerbaru(emiten);
+  const epsNow = p.saham_beredar ? lap.laba_bersih / p.saham_beredar : null;
+  if (p.mean_per_3y) { multiple = p.mean_per_3y; metodeMultiple = "Mean PER 3 tahun"; }
+  else if (p.per_sektor) { multiple = p.per_sektor; metodeMultiple = "PER sektor"; }
+  else if (epsNow && epsNow > 0) { multiple = harga / epsNow; metodeMultiple = "PER berjalan (harga/EPS)"; }
+
+  const target = (proyeksi?.proyeksi || []).map((pr) => {
+    const eps = p.saham_beredar ? pr.laba_bersih / p.saham_beredar : null;
+    let th = (multiple != null && eps != null) ? multiple * eps : null;
+    if (th != null && th <= 0) th = null;   // harga tak boleh negatif
+    return { tahun: pr.tahun, eps, target_harga: th, potensi_pct: th ? (th - harga) / harga : null };
+  });
+
+  let cagrHarga = null;
+  const last = target.at(-1);
+  if (last && last.target_harga > 0 && harga > 0) {
+    cagrHarga = Math.pow(last.target_harga / harga, 1 / target.length) - 1;
+  }
+
+  return {
+    harga_sekarang: harga, harga_wajar: hargaWajar, metode_wajar: metodeWajar,
+    potensi_wajar_pct: potensiWajar, multiple_pe: multiple, metode_multiple: metodeMultiple,
+    target, cagr_harga: cagrHarga,
+  };
+}
+
 export function analisisValuasi(emiten) {
   if (!emiten.pasar) return null;
   const rel = relativeValuation(emiten);

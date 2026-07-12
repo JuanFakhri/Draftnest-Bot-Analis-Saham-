@@ -147,6 +147,30 @@ def format_markdown(h: HasilAnalisis) -> str:
             L.append(f"> {h.valuasi_llm['outlook_tahun_depan']}")
         L.append("")
 
+    # --- Ramalan Harga Saham ---
+    rh = h.ramalan_harga
+    if rh:
+        L.append("## 5. Ramalan Harga Saham")
+        L.append(f"_Deterministik dari data (tanpa AI). Estimasi, bukan kepastian._")
+        L.append("")
+        L.append(f"- Harga sekarang: {_rp(rh.harga_sekarang)}")
+        if rh.harga_wajar is not None:
+            arah = "upside" if (rh.potensi_wajar_pct or 0) >= 0 else "downside"
+            L.append(f"- **Nilai wajar sekarang: {_rp(rh.harga_wajar)}** "
+                     f"({_pct(rh.potensi_wajar_pct)} {arah}) — {rh.metode_wajar}")
+        if rh.target:
+            L.append("")
+            L.append(f"Target harga ke depan (EPS proyeksi × {_num(rh.multiple_pe)} — {rh.metode_multiple}):")
+            L.append("")
+            L.append("| Tahun | EPS (proy.) | Target Harga | Potensi vs Sekarang |")
+            L.append("|---|---|---|---|")
+            for t in rh.target:
+                L.append(f"| {t.tahun} | {_rp(t.eps)} | {_rp(t.target_harga)} | {_pct(t.potensi_pct)} |")
+            if rh.cagr_harga is not None:
+                L.append("")
+                L.append(f"- Perkiraan CAGR harga: **{_pct(rh.cagr_harga)}/tahun**")
+        L.append("")
+
     # --- Disclaimer ---
     L.append("---")
     L.append("_Disclaimer: Analisis ini dihasilkan otomatis untuk tujuan edukasi/riset "

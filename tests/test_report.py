@@ -29,17 +29,17 @@ class FakeClient:
 class TestReport(unittest.TestCase):
     def test_offline_tanpa_client(self):
         h = jalankan_analisis(emiten_contoh(), None)
-        # Tanpa LLM: kualitatif tetap None (butuh AI), tapi kuantitatif &
-        # valuasi kini diberi skor deterministik dari data.
-        self.assertIsNone(h.skor_pilar["kualitatif"])
+        # Tanpa LLM: KETIGA pilar kini diberi skor deterministik dari data.
+        self.assertIsNotNone(h.skor_pilar["kualitatif"])
         self.assertIsNotNone(h.skor_pilar["kuantitatif"])
         self.assertIsNotNone(h.skor_pilar["valuasi"])
         # Skor akhir terhitung -> ada rekomendasi Beli/Tahan/Jual
         self.assertIsNotNone(h.skor_akhir)
         self.assertRegex(h.rekomendasi, r"BELI|TAHAN|JUAL")
-        # Rasio & valuasi deterministik tetap terisi
+        # Rasio, valuasi, & ramalan harga deterministik tetap terisi
         self.assertIsNotNone(h.kuantitatif_data)
         self.assertIsNotNone(h.valuasi_data)
+        self.assertIsNotNone(h.ramalan_harga)
 
     def test_skor_tinggi_beli(self):
         h = jalankan_analisis(emiten_contoh(), FakeClient(skor=9))

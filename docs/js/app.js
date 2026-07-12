@@ -1,6 +1,6 @@
 // app.js — logika UI Draftnest.
-import { analisisKuantitatif, analisisValuasi, proyeksiTahunDepan } from "./finance.js";
-import { skorKuantitatif, skorValuasi } from "./scoring.js";
+import { analisisKuantitatif, analisisValuasi, proyeksiTahunDepan, ramalanHarga } from "./finance.js";
+import { skorKualitatif, skorKuantitatif, skorValuasi } from "./scoring.js";
 import {
   DEFAULT_MODEL, analisisKualitatif, analisisKuantitatifLLM, analisisValuasiLLM,
 } from "./claude.js";
@@ -278,9 +278,10 @@ async function jalankan(pakaiAI) {
   const kuant = analisisKuantitatif(emiten);
   const valu = analisisValuasi(emiten);
   const proyeksi = proyeksiTahunDepan(emiten);
+  const ramalan = ramalanHarga(emiten, proyeksi, valu);
 
-  let kualLLM = null;
-  // Skor deterministik dari data (tanpa AI) sebagai dasar Kuantitatif & Valuasi.
+  // Skor deterministik dari data (tanpa AI) untuk KETIGA pilar.
+  let kualLLM = skorKualitatif(kuant);
   let kuantLLM = skorKuantitatif(kuant);
   let valuLLM = valu ? skorValuasi(valu, proyeksi) : null;
 
@@ -310,7 +311,7 @@ async function jalankan(pakaiAI) {
     setStatus("Skor & rekomendasi dihitung dari data (tanpa AI).", "ok");
   }
 
-  render(emiten, kuant, valu, proyeksi, kualLLM, kuantLLM, valuLLM);
+  render(emiten, kuant, valu, proyeksi, kualLLM, kuantLLM, valuLLM, ramalan);
 }
 $("btn-offline").addEventListener("click", () => jalankan(false));
 $("btn-ai").addEventListener("click", () => jalankan(true));
@@ -322,7 +323,7 @@ function disableBtns(v) {
 
 // ---------- Render ----------
 let laporanMd = "";
-function render(emiten, kuant, valu, proyeksi, kualLLM, kuantLLM, valuLLM) {
+function render(emiten, kuant, valu, proyeksi, kualLLM, kuantLLM, valuLLM, ramalan) {
   const skorPilar = {
     kualitatif: rataSkor(kualLLM, ["model_bisnis", "manajemen", "keunggulan_kompetitif", "prospek_industri"]),
     kuantitatif: rataSkor(kuantLLM, ["profitabilitas", "solvabilitas", "likuiditas", "pertumbuhan"]),
@@ -357,8 +358,10 @@ function render(emiten, kuant, valu, proyeksi, kualLLM, kuantLLM, valuLLM) {
   if (valu) D.appendChild(pilarValuasi(valu, valuLLM));
   const proj = pilarProyeksi(proyeksi, valuLLM);
   if (proj) D.appendChild(proj);
+  const forecast = pilarRamalanHarga(ramalan);
+  if (forecast) D.appendChild(forecast);
 
-  laporanMd = buatMarkdown(emiten, kuant, valu, proyeksi, kualLLM, kuantLLM, valuLLM, skorPilar, skorAkhir, rec);
+  laporanMd = buatMarkdown(emiten, kuant, valu, proyeksi, kualLLM, kuantLLM, valuLLM, skorPilar, skorAkhir, rec, ramalan);
   $("results").hidden = false;
   $("results").scrollIntoView({ behavior: "smooth" });
 }
@@ -463,8 +466,37 @@ function pilarProyeksi(proyeksi, valuLLM) {
   return s;
 }
 
+function pilarRamalanHarga(rh) {
+  if (!rh) return null;
+  const s = document.createElement("div");
+  s.className = "pillar";
+  const potKelas = (x) => (x == null ? "" : x >= 0 ? "pos" : "neg");
+  const sign = (x) => (x != null && x >= 0 ? "+" : "");
+  let wajar = "";
+  if (rh.harga_wajar != null) {
+    wajar = `<div class="ad-hero">
+      <div><span class="ad-hero-num">${rp(rh.harga_wajar)}</span><small>Nilai Wajar Sekarang</small></div>
+      <div><span class="ad-hero-num ${potKelas(rh.potensi_wajar_pct)}">${sign(rh.potensi_wajar_pct)}${pct(rh.potensi_wajar_pct)}</span><small>Potensi vs Harga Kini</small></div>
+    </div><p class="hint">Metode nilai wajar: ${rh.metode_wajar}. Harga kini ${rp(rh.harga_sekarang)}.</p>`;
+  }
+  let tabel = "";
+  if (rh.target?.length) {
+    const rows = rh.target.map((t) =>
+      `<tr><td>${t.tahun}</td><td>${rp(t.eps)}</td><td>${rp(t.target_harga)}</td>
+       <td class="${potKelas(t.potensi_pct)}">${sign(t.potensi_pct)}${pct(t.potensi_pct)}</td></tr>`).join("");
+    tabel = `<table class="ratios"><thead><tr><th>Tahun</th><th>EPS (proy.)</th><th>Target Harga</th><th>Potensi vs Kini</th></tr></thead>
+      <tbody>${rows}</tbody></table>
+      <p class="hint">Target = EPS proyeksi × ${numx(rh.multiple_pe)} (${rh.metode_multiple}).
+      ${rh.cagr_harga != null ? `Perkiraan CAGR harga <b>${sign(rh.cagr_harga)}${pct(rh.cagr_harga)}/tahun</b>.` : ""}</p>`;
+  }
+  s.innerHTML = `<h3>5. Ramalan Harga Saham</h3>
+    <p class="hint">Estimasi deterministik dari data (tanpa AI) — bukan kepastian, sangat sensitif pada asumsi pertumbuhan & kelipatan P/E.</p>
+    ${wajar}${tabel}`;
+  return s;
+}
+
 // ---------- Markdown untuk unduhan ----------
-function buatMarkdown(e, kuant, valu, proyeksi, kualLLM, kuantLLM, valuLLM, skorPilar, skorAkhir, rec) {
+function buatMarkdown(e, kuant, valu, proyeksi, kualLLM, kuantLLM, valuLLM, skorPilar, skorAkhir, rec, ramalan) {
   const L = [];
   L.push(`# Analisis Saham — ${e.profil.nama || e.profil.kode} (${e.profil.kode})`);
   L.push(`_Sektor: ${e.profil.sektor} · ${new Date().toISOString().slice(0, 10)}_\n`);
@@ -513,6 +545,22 @@ function buatMarkdown(e, kuant, valu, proyeksi, kualLLM, kuantLLM, valuLLM, skor
     proyeksi.proyeksi.forEach((p) =>
       L.push(`| ${p.tahun} | ${Math.round(p.pendapatan).toLocaleString("id-ID")} | ${Math.round(p.laba_bersih).toLocaleString("id-ID")} | ${pct(p.net_margin)} |`));
     if (valuLLM?.outlook_tahun_depan) L.push(`\n> ${valuLLM.outlook_tahun_depan}`);
+  }
+  if (ramalan) {
+    const sign = (x) => (x != null && x >= 0 ? "+" : "");
+    L.push(`\n## 5. Ramalan Harga Saham`);
+    L.push(`_Estimasi deterministik dari data (tanpa AI). Bukan kepastian._`);
+    L.push(`- Harga sekarang: ${rp(ramalan.harga_sekarang)}`);
+    if (ramalan.harga_wajar != null)
+      L.push(`- **Nilai wajar sekarang: ${rp(ramalan.harga_wajar)}** (${sign(ramalan.potensi_wajar_pct)}${pct(ramalan.potensi_wajar_pct)}) — ${ramalan.metode_wajar}`);
+    if (ramalan.target?.length) {
+      L.push(`\nTarget harga ke depan (EPS proyeksi × ${numx(ramalan.multiple_pe)} — ${ramalan.metode_multiple}):`);
+      L.push(`| Tahun | EPS (proy.) | Target Harga | Potensi vs Sekarang |`);
+      L.push(`|---|---|---|---|`);
+      ramalan.target.forEach((t) =>
+        L.push(`| ${t.tahun} | ${rp(t.eps)} | ${rp(t.target_harga)} | ${sign(t.potensi_pct)}${pct(t.potensi_pct)} |`));
+      if (ramalan.cagr_harga != null) L.push(`\n- Perkiraan CAGR harga: **${sign(ramalan.cagr_harga)}${pct(ramalan.cagr_harga)}/tahun**`);
+    }
   }
   L.push(`\n---\n_Disclaimer: analisis otomatis untuk edukasi/riset, bukan rekomendasi jual/beli. DYOR._`);
   return L.join("\n");
