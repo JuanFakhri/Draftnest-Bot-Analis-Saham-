@@ -27,8 +27,10 @@ def _skor(x: Optional[float]) -> str:
 
 def _poin_llm(hasil: Optional[dict[str, Any]], field: str, judul: str) -> str:
     if not hasil or field not in hasil:
-        return f"- **{judul}:** _(analisis LLM tidak tersedia)_"
+        return f"- **{judul}:** _(belum bisa dinilai dari data yang tersedia)_"
     p = hasil[field]
+    if p.get("skor") is None:
+        return f"- **{judul}:** {p.get('justifikasi', 'belum bisa dinilai dari data')}"
     return f"- **{judul} — {p['skor']}/10:** {p['justifikasi']}"
 
 

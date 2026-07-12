@@ -88,13 +88,13 @@ export function skorKualitatif(kuant) {
   const [moS, moJ] = skorKeunggulanKompetitif(kuant);
   const [piS, piJ] = skorProspekIndustri(kuant);
 
-  const hasil = {};
-  if (mbS != null) hasil.model_bisnis = { skor: mbS, justifikasi: mbJ };
-  if (mnS != null) hasil.manajemen = { skor: mnS, justifikasi: mnJ };
-  if (moS != null) hasil.keunggulan_kompetitif = { skor: moS, justifikasi: moJ };
-  if (piS != null) hasil.prospek_industri = { skor: piS, justifikasi: piJ };
-
-  const skorAda = Object.values(hasil).map((d) => d.skor);
+  const hasil = {
+    model_bisnis: { skor: mbS, justifikasi: mbJ },
+    manajemen: { skor: mnS, justifikasi: mnJ },
+    keunggulan_kompetitif: { skor: moS, justifikasi: moJ },
+    prospek_industri: { skor: piS, justifikasi: piJ },
+  };
+  const skorAda = Object.values(hasil).map((d) => d.skor).filter((s) => s != null);
   if (skorAda.length) {
     const rata = skorAda.reduce((a, b) => a + b, 0) / skorAda.length;
     hasil.ringkasan =
@@ -160,13 +160,13 @@ export function skorKuantitatif(kuant) {
   const [likS, likJ] = skorLikuiditas(r);
   const [tumS, tumJ] = skorPertumbuhan(kuant);
 
-  const hasil = {};
-  if (profS != null) hasil.profitabilitas = { skor: profS, justifikasi: profJ };
-  if (solvS != null) hasil.solvabilitas = { skor: solvS, justifikasi: solvJ };
-  if (likS != null) hasil.likuiditas = { skor: likS, justifikasi: likJ };
-  if (tumS != null) hasil.pertumbuhan = { skor: tumS, justifikasi: tumJ };
-
-  const skorAda = Object.values(hasil).map((d) => d.skor);
+  const hasil = {
+    profitabilitas: { skor: profS, justifikasi: profJ },
+    solvabilitas: { skor: solvS, justifikasi: solvJ },
+    likuiditas: { skor: likS, justifikasi: likJ },
+    pertumbuhan: { skor: tumS, justifikasi: tumJ },
+  };
+  const skorAda = Object.values(hasil).map((d) => d.skor).filter((s) => s != null);
   if (skorAda.length) {
     const rata = skorAda.reduce((a, b) => a + b, 0) / skorAda.length;
     hasil.ringkasan =
@@ -225,9 +225,10 @@ export function skorValuasi(v, proyeksi = null) {
   const [relS, relJ, relStatus] = skorRelative(v);
   const [absS, absJ] = skorAbsolute(v);
 
-  const hasil = {};
-  if (relS != null) hasil.relative_valuation = { skor: relS, justifikasi: relJ };
-  if (absS != null) hasil.absolute_valuation = { skor: absS, justifikasi: absJ };
+  const hasil = {
+    relative_valuation: { skor: relS, justifikasi: relJ },
+    absolute_valuation: { skor: absS, justifikasi: absJ },
+  };
 
   let status = null;
   const mos = v.margin_of_safety;

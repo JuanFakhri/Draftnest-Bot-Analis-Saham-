@@ -30,10 +30,10 @@ const FIELD_LAPORAN = {
 };
 
 // ---------- Format ----------
-const pct = (x) => (x != null ? (x * 100).toFixed(1) + "%" : "n/a");
-const numx = (x) => (x != null ? x.toFixed(2) + "x" : "n/a");
-const rp = (x) => (x != null ? "Rp" + Math.round(x).toLocaleString("id-ID") : "n/a");
-const skorTxt = (x) => (x != null ? x.toFixed(1) + "/10" : "n/a");
+const pct = (x) => (x != null && isFinite(x) ? (x * 100).toFixed(1) + "%" : "–");
+const numx = (x) => (x != null && isFinite(x) ? x.toFixed(2) + "x" : "–");
+const rp = (x) => (x != null && isFinite(x) ? "Rp" + Math.round(x).toLocaleString("id-ID") : "–");
+const skorTxt = (x) => (x != null && isFinite(x) ? x.toFixed(1) + "/10" : "–");
 const skorKelas = (s) => (s >= 7 ? "g" : s >= 5 ? "m" : "b");
 
 // ---------- Tema ----------
@@ -369,11 +369,12 @@ function render(emiten, kuant, valu, proyeksi, kualLLM, kuantLLM, valuLLM, ramal
 function poinEl(hasil, key, judul) {
   const div = document.createElement("div");
   div.className = "point";
-  if (!hasil || !hasil[key]) {
-    div.innerHTML = `<span class="chip">–</span><div class="txt"><strong>${judul}</strong><span>Analisis AI belum dijalankan.</span></div>`;
+  const p = hasil && hasil[key];
+  if (!p || p.skor == null) {
+    const alasan = (p && p.justifikasi) || "Belum bisa dinilai dari data yang tersedia.";
+    div.innerHTML = `<span class="chip">–</span><div class="txt"><strong>${judul}</strong><span>${alasan}</span></div>`;
     return div;
   }
-  const p = hasil[key];
   div.innerHTML = `<span class="chip ${skorKelas(p.skor)}">${p.skor}</span>
     <div class="txt"><strong>${judul}</strong><span>${p.justifikasi}</span></div>`;
   return div;
@@ -505,7 +506,12 @@ function buatMarkdown(e, kuant, valu, proyeksi, kualLLM, kuantLLM, valuLLM, skor
   L.push(`- **Skor akhir:** ${skorTxt(skorAkhir)}`);
   L.push(`- Kualitatif ${skorTxt(skorPilar.kualitatif)} · Kuantitatif ${skorTxt(skorPilar.kuantitatif)} · Valuasi ${skorTxt(skorPilar.valuasi)}`);
   if (valuLLM?.status) L.push(`- **Status valuasi:** ${valuLLM.status}`);
-  const poin = (h, k, j) => h?.[k] ? `- **${j} — ${h[k].skor}/10:** ${h[k].justifikasi}` : `- **${j}:** _(AI belum dijalankan)_`;
+  const poin = (h, k, j) => {
+    const p = h?.[k];
+    if (!p) return `- **${j}:** _(belum bisa dinilai dari data yang tersedia)_`;
+    if (p.skor == null) return `- **${j}:** ${p.justifikasi || "belum bisa dinilai dari data"}`;
+    return `- **${j} — ${p.skor}/10:** ${p.justifikasi}`;
+  };
   L.push(`\n## 1. Analisis Kualitatif`);
   L.push(poin(kualLLM, "model_bisnis", "Model Bisnis"));
   L.push(poin(kualLLM, "manajemen", "Manajemen"));

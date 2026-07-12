@@ -26,6 +26,22 @@ def _cagr(awal: float, akhir: float, periode: int) -> Optional[float]:
     return (akhir / awal) ** (1 / periode) - 1
 
 
+def cagr_seri(laporan: list[LaporanTahunan], ambil) -> Optional[float]:
+    """CAGR dari tahun-POSITIF-pertama ke tahun terakhir.
+
+    Memakai basis tahun pertama yang nilainya > 0 agar tahun awal bernilai
+    0/negatif (mis. baris "phantom" atau emiten baru IPO) tidak membuat CAGR
+    gagal (n/a) dan proyeksi menjadi datar.
+    """
+    seri = [(l.tahun, ambil(l)) for l in laporan]
+    awal = next(((t, v) for t, v in seri if v is not None and v > 0), None)
+    if awal is None:
+        return None
+    t0, v0 = awal
+    t1, v1 = seri[-1]
+    return _cagr(v0, v1, t1 - t0)
+
+
 @dataclass
 class RasioKunci:
     tahun: int
@@ -67,9 +83,8 @@ def analisis_kuantitatif(emiten: Emiten) -> RingkasanKuantitatif:
     growth_pendapatan = None
     growth_laba = None
     if len(laporan) >= 2:
-        periode = laporan[-1].tahun - laporan[0].tahun
-        growth_pendapatan = _cagr(laporan[0].pendapatan, laporan[-1].pendapatan, periode)
-        growth_laba = _cagr(laporan[0].laba_bersih, laporan[-1].laba_bersih, periode)
+        growth_pendapatan = cagr_seri(laporan, lambda l: l.pendapatan)
+        growth_laba = cagr_seri(laporan, lambda l: l.laba_bersih)
 
     return RingkasanKuantitatif(
         rasio_terbaru=rasio[-1],

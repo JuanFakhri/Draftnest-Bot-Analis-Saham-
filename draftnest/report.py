@@ -46,7 +46,11 @@ class HasilAnalisis:
 def _rata_skor(hasil: Optional[dict[str, Any]], field_poin: list[str]) -> Optional[float]:
     if not hasil:
         return None
-    skor = [hasil[k]["skor"] for k in field_poin if k in hasil and "skor" in hasil[k]]
+    skor = [
+        hasil[k]["skor"]
+        for k in field_poin
+        if k in hasil and hasil[k].get("skor") is not None
+    ]
     return sum(skor) / len(skor) if skor else None
 
 

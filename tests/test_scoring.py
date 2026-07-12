@@ -58,7 +58,9 @@ class TestSkorKuantitatif(unittest.TestCase):
         )
         kuant = R.analisis_kuantitatif(em)
         hasil = skor_kuantitatif(kuant)
-        self.assertNotIn("pertumbuhan", hasil)
+        # Pertumbuhan hadir tapi tak berskor (butuh >=2 tahun) + beri alasan.
+        self.assertIsNone(hasil["pertumbuhan"]["skor"])
+        self.assertIn("data", hasil["pertumbuhan"]["justifikasi"].lower())
 
 
 class TestSkorKualitatif(unittest.TestCase):
@@ -77,10 +79,11 @@ class TestSkorKualitatif(unittest.TestCase):
         )
         kuant = R.analisis_kuantitatif(em)
         hasil = skor_kualitatif(kuant)
-        # Tanpa >=2 tahun, prospek industri (butuh CAGR) tak muncul.
-        self.assertNotIn("prospek_industri", hasil)
-        # Tapi model bisnis (dari margin) tetap ada.
-        self.assertIn("model_bisnis", hasil)
+        # Tanpa >=2 tahun, prospek industri (butuh CAGR) hadir tapi skor None + alasan.
+        self.assertIsNone(hasil["prospek_industri"]["skor"])
+        self.assertIn("data", hasil["prospek_industri"]["justifikasi"].lower())
+        # Model bisnis (dari margin) tetap punya skor.
+        self.assertIsNotNone(hasil["model_bisnis"]["skor"])
 
 
 class TestRamalanHarga(unittest.TestCase):

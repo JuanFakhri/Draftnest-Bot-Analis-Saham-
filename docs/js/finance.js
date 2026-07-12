@@ -10,6 +10,16 @@ export function cagr(awal, akhir, periode) {
   return Math.pow(akhir / awal, 1 / periode) - 1;
 }
 
+// CAGR dari tahun-POSITIF-pertama ke terakhir (abaikan tahun awal bernilai 0/negatif).
+export function cagrSeri(laporan, ambil) {
+  const seri = laporan.map((l) => [l.tahun, ambil(l)]);
+  const awal = seri.find(([, v]) => v != null && v > 0);
+  if (!awal) return null;
+  const [t0, v0] = awal;
+  const [t1, v1] = seri[seri.length - 1];
+  return cagr(v0, v1, t1 - t0);
+}
+
 export function fcf(lap) {
   if (lap.free_cash_flow != null) return lap.free_cash_flow;
   // Proxy: CFO + CFI (CFI biasanya negatif = capex)
@@ -36,9 +46,8 @@ export function analisisKuantitatif(emiten) {
   let growthPendapatan = null;
   let growthLaba = null;
   if (laporan.length >= 2) {
-    const periode = laporan[laporan.length - 1].tahun - laporan[0].tahun;
-    growthPendapatan = cagr(laporan[0].pendapatan, laporan[laporan.length - 1].pendapatan, periode);
-    growthLaba = cagr(laporan[0].laba_bersih, laporan[laporan.length - 1].laba_bersih, periode);
+    growthPendapatan = cagrSeri(laporan, (l) => l.pendapatan);
+    growthLaba = cagrSeri(laporan, (l) => l.laba_bersih);
   }
 
   return {
@@ -120,9 +129,10 @@ function absoluteValuation(emiten) {
 export function proyeksiTahunDepan(emiten, nTahun = 3) {
   const lap = [...emiten.laporan].sort((a, b) => a.tahun - b.tahun);
   if (lap.length < 2) return { cagr_pendapatan: null, cagr_laba: null, proyeksi: [] };
-  const periode = lap.at(-1).tahun - lap[0].tahun;
-  const gPend = cagr(lap[0].pendapatan, lap.at(-1).pendapatan, periode);
-  const gLaba = cagr(lap[0].laba_bersih, lap.at(-1).laba_bersih, periode);
+  const gPend = cagrSeri(lap, (l) => l.pendapatan);
+  const gLaba = cagrSeri(lap, (l) => l.laba_bersih);
+  // Tanpa sinyal pertumbuhan, proyeksi hanya akan datar & menyesatkan.
+  if (gPend == null && gLaba == null) return { cagr_pendapatan: null, cagr_laba: null, proyeksi: [] };
   const t = lap.at(-1);
   let pend = t.pendapatan, laba = t.laba_bersih;
   const proyeksi = [];
