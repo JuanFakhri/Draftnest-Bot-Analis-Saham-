@@ -31,6 +31,8 @@ matematika keuangan dihitung di JavaScript, dan interpretasi 3 pilar memanggil
 **Fitur:**
 - Mode **siang & malam** (elegan, responsif)
 - Form input ramah + kartu laporan per tahun (Neraca / Laba Rugi / Arus Kas)
+- **Ambil Harga IDX real-time** (Yahoo Finance `.JK` via CORS-proxy, best-effort)
+- **Grafik tren rasio** (ROE/ROA/Net Margin) — SVG interaktif dengan crosshair + tooltip
 - **Muat Contoh**, **Impor JSON**, **Ekspor JSON**
 - **Hitung Rasio & Valuasi** (offline, tanpa API key) — instan
 - **Analisis Lengkap dengan AI** (3 pilar via Claude)
@@ -85,6 +87,17 @@ dilengkapi manual.
 Matematika keuangan (rasio, PER/PBV, DCF) dihitung **deterministik di Python**,
 bukan diserahkan ke LLM. Claude bertugas **menginterpretasi & memberi skor** atas
 angka-angka tersebut — sehingga hasil konsisten dan bisa diaudit.
+
+## Pengujian
+
+Unit test memakai pustaka standar (tanpa dependensi tambahan):
+
+```bash
+python -m unittest discover -s tests -v
+```
+
+CI otomatis menjalankan tes di setiap push & PR
+([`.github/workflows/tests.yml`](.github/workflows/tests.yml), Python 3.11 & 3.12).
 
 ## Instalasi
 
@@ -188,8 +201,12 @@ docs/              # website statis (GitHub Pages)
   css/styles.css   # tema elegan + mode siang/malam
   js/finance.js    # port matematika keuangan ke browser
   js/claude.js     # panggilan Claude API dari browser (3 pilar)
+  js/chart.js      # grafik tren rasio (SVG interaktif)
+  js/idx-price.js  # ambil harga IDX real-time via CORS-proxy
   js/app.js        # logika UI
+tests/             # unit test (unittest, tanpa dependensi)
 .github/workflows/deploy-pages.yml   # deploy otomatis ke Pages
+.github/workflows/tests.yml          # CI unit test
 ```
 
 ## Sebagai Library

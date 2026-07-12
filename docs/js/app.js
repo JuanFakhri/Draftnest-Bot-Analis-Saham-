@@ -3,6 +3,8 @@ import { analisisKuantitatif, analisisValuasi } from "./finance.js";
 import {
   DEFAULT_MODEL, analisisKualitatif, analisisKuantitatifLLM, analisisValuasiLLM,
 } from "./claude.js";
+import { renderTrendChart } from "./chart.js";
+import { ambilHargaIDX } from "./idx-price.js";
 
 const $ = (id) => document.getElementById(id);
 const BOBOT = { kualitatif: 0.35, kuantitatif: 0.35, valuasi: 0.30 };
@@ -172,6 +174,24 @@ $("file-import").addEventListener("change", async (ev) => {
   } catch (_) { setStatus("File JSON tidak valid.", "err"); }
 });
 
+// ---------- Ambil harga IDX (real-time via proxy) ----------
+$("btn-fetch-price").addEventListener("click", async () => {
+  const kode = $("p-kode").value.trim();
+  const note = $("price-note");
+  const btn = $("btn-fetch-price");
+  if (!kode) { note.textContent = "Isi kode emiten dulu."; return; }
+  btn.disabled = true; note.textContent = "Mengambil harga…";
+  try {
+    const { harga, mata_uang, sumber } = await ambilHargaIDX(kode);
+    $("m-harga").value = harga;
+    note.textContent = `✓ ${mata_uang} ${harga.toLocaleString("id-ID")} — ${sumber}. Lengkapi jumlah saham beredar.`;
+  } catch (e) {
+    note.textContent = e.message;
+  } finally {
+    btn.disabled = false;
+  }
+});
+
 // ---------- Status ----------
 function setStatus(msg, kelas = "") {
   const el = $("status");
@@ -317,6 +337,8 @@ function pilarKuantitatif(kuant, llm) {
       <div><span class="k">Growth Pendapatan (CAGR)</span><span>${pct(kuant.growth_pendapatan)}</span></div>
       <div><span class="k">Growth Laba Bersih (CAGR)</span><span>${pct(kuant.growth_laba_bersih)}</span></div>
     </div>`;
+  const chart = renderTrendChart(kuant.rasio_historis);
+  if (chart) s.appendChild(chart);
   s.appendChild(poinEl(llm, "profitabilitas", "Profitabilitas"));
   s.appendChild(poinEl(llm, "solvabilitas", "Solvabilitas"));
   s.appendChild(poinEl(llm, "likuiditas", "Likuiditas"));

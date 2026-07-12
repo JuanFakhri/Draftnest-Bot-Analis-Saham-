@@ -24,6 +24,10 @@
   --warn: #fbbf24;
   --bad: #f87171;
   --input-bg: #10151f;
+  /* Grafik (dataviz) — mode malam */
+  --series-1: #3987e5; --series-2: #199e70; --series-3: #c98500;
+  --viz-surface: #161b26; --viz-grid: #2c2c2a; --viz-axis: #383835;
+  --viz-ink: #e8ecf4; --viz-muted: #898781;
 }
 
 /* ---- Mode Siang ---- */
@@ -42,6 +46,10 @@
   --bad: #d64545;
   --input-bg: #ffffff;
   --shadow: 0 10px 30px rgba(23, 32, 58, 0.08);
+  /* Grafik (dataviz) — mode siang */
+  --series-1: #2a78d6; --series-2: #1baf7a; --series-3: #eda100;
+  --viz-surface: #ffffff; --viz-grid: #e1e0d9; --viz-axis: #c3c2b7;
+  --viz-ink: #17203a; --viz-muted: #898781;
 }
 
 * { box-sizing: border-box; }
@@ -218,6 +226,19 @@ table.ratios thead th { color: var(--text-dim); font-weight: 600; }
 .disclaimer { font-size: 12px; color: var(--text-dim); margin-top: 18px;
   padding-top: 14px; border-top: 1px solid var(--border); }
 .hint { font-size: 12px; color: var(--text-dim); margin: 4px 0 12px; }
+
+/* ---- Grafik tren rasio ---- */
+.chart-fig { position: relative; margin: 12px 0 4px; }
+.chart-legend { display: flex; gap: 16px; flex-wrap: wrap; margin: 0 0 6px; font-size: 12px; color: var(--text-dim); }
+.chart-legend span, .chart-tip span { display: inline-flex; align-items: center; gap: 6px; }
+.sw { width: 10px; height: 10px; border-radius: 3px; display: inline-block; }
+.chart-tip {
+  position: absolute; top: 24px; pointer-events: none;
+  background: var(--surface); border: 1px solid var(--border); border-radius: 8px;
+  padding: 8px 10px; font-size: 12px; box-shadow: var(--shadow); z-index: 5;
+  display: grid; gap: 3px; white-space: nowrap;
+}
+.chart-tip b { font-variant-numeric: tabular-nums; }
 
 /* ---- Dialog ---- */
 .dialog { border: none; border-radius: var(--radius); padding: 0; max-width: 440px; width: 92%;
