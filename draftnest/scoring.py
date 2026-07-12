@@ -306,8 +306,9 @@ def _skor_relative(v: V.HasilValuasi) -> tuple[Optional[int], str, Optional[str]
             bawah=2,
         )
         status = "undervalued" if mos >= 0.05 else "overvalued" if mos <= -0.05 else "fairvalued"
+        metode = rel.metode_fair_value or "Fair Value"
         just = (
-            f"Fair Value (Mean PER&PBV) {_rp(rel.fair_value)} vs harga {_rp(v.harga_saham)} "
+            f"Nilai wajar {_rp(rel.fair_value)} ({metode}) vs harga {_rp(v.harga_saham)} "
             f"-> Margin of Safety {_pct(mos)}. "
         )
         just += ("Harga di bawah nilai wajar (diskon)." if mos >= 0.05

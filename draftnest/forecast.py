@@ -116,7 +116,7 @@ def ramalan_harga(
         wajar_sektor = [x for x in (rel.harga_wajar_per, rel.harga_wajar_pbv) if x is not None]
         sektor_avg = sum(wajar_sektor) / len(wajar_sektor) if wajar_sektor else None
         kandidat = [
-            (rel.fair_value, "Fair Value (Mean PER & PBV)"),
+            (rel.fair_value, rel.metode_fair_value or "Fair Value"),
             (valu.absolute.nilai_intrinsik_per_saham, "Nilai intrinsik DCF"),
             (sektor_avg, "Harga wajar rata-rata sektor (PER/PBV)"),
         ]

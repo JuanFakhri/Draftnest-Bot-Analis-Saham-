@@ -185,7 +185,8 @@ function skorRelative(v) {
     const skor = skorDariAmbang(mos,
       [[0.30, 10], [0.15, 9], [0.05, 8], [0.0, 6], [-0.15, 4]], 2);
     const status = mos >= 0.05 ? "undervalued" : mos <= -0.05 ? "overvalued" : "fairvalued";
-    let just = `Fair Value (Mean PER&PBV) ${rp(rel.fair_value)} vs harga ${rp(v.harga_saham)} → Margin of Safety ${pct(mos)}. `;
+    const metode = rel.metode_fair_value || "Fair Value";
+    let just = `Nilai wajar ${rp(rel.fair_value)} (${metode}) vs harga ${rp(v.harga_saham)} → Margin of Safety ${pct(mos)}. `;
     just += mos >= 0.05 ? "Harga di bawah nilai wajar (diskon)."
       : mos <= -0.05 ? "Harga di atas nilai wajar (premium)." : "Harga mendekati nilai wajar.";
     return [skor, just, status];

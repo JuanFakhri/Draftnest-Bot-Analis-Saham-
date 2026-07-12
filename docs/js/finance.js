@@ -75,21 +75,41 @@ function relativeValuation(emiten) {
   const fvPer = p.mean_per_3y && eps ? p.mean_per_3y * eps : null;
   const fvPbv = p.mean_pbv_3y && bvps ? p.mean_pbv_3y * bvps : null;
   const tersedia = [fvPer, fvPbv].filter((x) => x != null);
-  const fairValue = tersedia.length ? tersedia.reduce((a, b) => a + b, 0) / tersedia.length : null;
+  let fairValue = tersedia.length ? tersedia.reduce((a, b) => a + b, 0) / tersedia.length : null;
+  let metodeFv = fairValue ? "Mean PER & PBV (historis emiten)" : null;
+
+  const hargaWajarPer = p.per_sektor && eps ? p.per_sektor * eps : null;
+  const hargaWajarPbv = p.pbv_sektor && bvps ? p.pbv_sektor * bvps : null;
+
+  // Fallback agar nilai wajar tetap terisi walau Mean PER/PBV & data sektor kosong.
+  if (fairValue == null) {
+    // 1) Justified P/B berbasis ROE (Gordon): P/B wajar = (ROE - g)/(r - g).
+    const roe = bagi(lap.laba_bersih, lap.total_ekuitas);
+    const r = p.discount_rate ?? 0.11, g = p.terminal_growth ?? 0.03;
+    if (roe != null && bvps && r > g && roe > g) {
+      const fvJust = ((roe - g) / (r - g)) * bvps;
+      if (fvJust > 0) { fairValue = fvJust; metodeFv = "Justified P/B berbasis ROE (Gordon)"; }
+    }
+    if (fairValue == null) {
+      const ws = [hargaWajarPer, hargaWajarPbv].filter((x) => x != null && x > 0);
+      if (ws.length) { fairValue = ws.reduce((a, b) => a + b, 0) / ws.length; metodeFv = "Rata-rata harga wajar sektor (PER/PBV)"; }
+    }
+  }
   const mosFair = fairValue ? (fairValue - p.harga_saham) / fairValue : null;
 
   return {
     eps, bvps, per, pbv,
     per_sektor: p.per_sektor ?? null,
     pbv_sektor: p.pbv_sektor ?? null,
-    harga_wajar_per: p.per_sektor && eps ? p.per_sektor * eps : null,
-    harga_wajar_pbv: p.pbv_sektor && bvps ? p.pbv_sektor * bvps : null,
+    harga_wajar_per: hargaWajarPer,
+    harga_wajar_pbv: hargaWajarPbv,
     mean_per: p.mean_per_3y ?? null,
     mean_pbv: p.mean_pbv_3y ?? null,
     fair_value_per: fvPer,
     fair_value_pbv: fvPbv,
     fair_value: fairValue,
     mos_fair_value: mosFair,
+    metode_fair_value: metodeFv,
   };
 }
 
@@ -160,7 +180,7 @@ export function ramalanHarga(emiten, proyeksi, valu) {
     const ws = [rel.harga_wajar_per, rel.harga_wajar_pbv].filter((x) => x != null);
     const sektorAvg = ws.length ? ws.reduce((a, b) => a + b, 0) / ws.length : null;
     const kandidat = [
-      [rel.fair_value, "Fair Value (Mean PER & PBV)"],
+      [rel.fair_value, rel.metode_fair_value || "Fair Value"],
       [valu.absolute.nilai_intrinsik_per_saham, "Nilai intrinsik DCF"],
       [sektorAvg, "Harga wajar rata-rata sektor (PER/PBV)"],
     ];
