@@ -1,5 +1,6 @@
 // app.js — logika UI Draftnest.
 import { analisisKuantitatif, analisisValuasi, proyeksiTahunDepan } from "./finance.js";
+import { skorKuantitatif, skorValuasi } from "./scoring.js";
 import {
   DEFAULT_MODEL, analisisKualitatif, analisisKuantitatifLLM, analisisValuasiLLM,
 } from "./claude.js";
@@ -278,7 +279,11 @@ async function jalankan(pakaiAI) {
   const valu = analisisValuasi(emiten);
   const proyeksi = proyeksiTahunDepan(emiten);
 
-  let kualLLM = null, kuantLLM = null, valuLLM = null;
+  let kualLLM = null;
+  // Skor deterministik dari data (tanpa AI) sebagai dasar Kuantitatif & Valuasi.
+  let kuantLLM = skorKuantitatif(kuant);
+  let valuLLM = valu ? skorValuasi(valu, proyeksi) : null;
+
   if (pakaiAI) {
     const key = localStorage.getItem("draftnest-key");
     const model = localStorage.getItem("draftnest-model") || DEFAULT_MODEL;
@@ -302,7 +307,7 @@ async function jalankan(pakaiAI) {
     }
     disableBtns(false);
   } else {
-    setStatus("Rasio & valuasi dihitung (offline).", "ok");
+    setStatus("Skor & rekomendasi dihitung dari data (tanpa AI).", "ok");
   }
 
   render(emiten, kuant, valu, proyeksi, kualLLM, kuantLLM, valuLLM);

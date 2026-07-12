@@ -37,7 +37,7 @@ matematika keuangan dihitung di JavaScript, dan interpretasi 3 pilar memanggil
 - **Proyeksi tahun mendatang** (CAGR) + **outlook AI** forward-looking
 - **Ambil Harga IDX real-time** (Yahoo Finance `.JK` via CORS-proxy, best-effort)
 - Form input ramah + kartu laporan per tahun, **Muat Contoh**, **Impor/Ekspor JSON**
-- **Hitung Rasio & Valuasi** (offline, tanpa API key) — instan
+- **Analisis dari Data (tanpa AI)** (offline, tanpa API key) — skor + rekomendasi Beli/Tahan/Jual dihitung deterministik dari rasio & valuasi. AI hanya diperlukan untuk narasi pilar Kualitatif.
 - **Analisis Lengkap dengan AI** (3 pilar via Claude)
 - Kartu skor per pilar, tabel rasio, rincian DCF, badge rekomendasi
 - **Unduh laporan .md** & cetak
@@ -237,6 +237,7 @@ draftnest/
   forecast.py      # proyeksi tahun mendatang (CAGR)
   ratios.py        # Pilar 2: hitung rasio (data olahan) — deterministik
   valuation.py     # Pilar 3: PER/PBV (relative) + DCF (absolute) — deterministik
+  scoring.py       # skor + rekomendasi deterministik (tanpa AI) dari rasio & valuasi
   client.py        # pembungkus Anthropic Claude API (structured output)
   analyzers/
     kualitatif.py  # Pilar 1: prompt 4 poin kualitatif
@@ -250,6 +251,7 @@ docs/              # website statis (GitHub Pages)
   index.html
   css/styles.css   # tema elegan + mode siang/malam
   js/finance.js    # port matematika keuangan ke browser
+  js/scoring.js    # port skoring deterministik (tanpa AI) ke browser
   js/claude.js     # panggilan Claude API dari browser (3 pilar)
   js/chart.js      # grafik tren rasio (SVG interaktif)
   js/idx-price.js  # ambil harga IDX real-time via CORS-proxy
