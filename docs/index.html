@@ -49,6 +49,12 @@
   </dialog>
 
   <main class="container">
+    <nav class="tabs" role="tablist">
+      <button id="tab-analisis" class="tab active" role="tab">🔍 Analisis Saham</button>
+      <button id="tab-avgdown" class="tab" role="tab">📉 Average Down</button>
+    </nav>
+
+    <div id="view-analisis">
     <!-- ================= INPUT ================= -->
     <section class="card">
       <div class="card-head">
@@ -152,6 +158,45 @@
         Selalu lakukan riset mandiri (DYOR). Hasil DCF sangat sensitif terhadap asumsi.
       </p>
     </section>
+    </div><!-- /view-analisis -->
+
+    <!-- ================= AVERAGE DOWN ================= -->
+    <div id="view-avgdown" hidden>
+      <section class="card">
+        <div class="card-head">
+          <h2>📉 Kalkulator Average Down</h2>
+        </div>
+        <p class="hint">Hitung harga rata-rata setelah average down, untung/rugi, risiko porto,
+          dan simulasi berapa lot untuk menurunkan rata-rata ke target. 1 lot = 100 lembar.</p>
+
+        <fieldset class="group">
+          <legend>Posisi & Harga</legend>
+          <div class="grid grid-3">
+            <label>Harga Saat Ini (Rp)<input id="ad-harga" type="number" step="any" placeholder="mis. 655" /></label>
+            <label>Cash / Modal Total (opsional)<input id="ad-cash" type="number" step="any" placeholder="untuk hitung risiko" /></label>
+          </div>
+          <div id="ad-rows"></div>
+          <button id="ad-add" class="btn btn-ghost" type="button">+ Tambah Pembelian (Average Down)</button>
+        </fieldset>
+
+        <fieldset class="group">
+          <legend>Hasil</legend>
+          <div id="ad-result"></div>
+        </fieldset>
+
+        <fieldset class="group">
+          <legend>Simulasi: Turunkan Rata-rata ke Target</legend>
+          <div class="grid grid-3">
+            <label>Target Rata-rata (Rp)<input id="ad-sim-target" type="number" step="any" placeholder="mis. 640" /></label>
+            <label>Harga Beli (opsional)<input id="ad-sim-harga" type="number" step="any" placeholder="default: harga kini" /></label>
+          </div>
+          <p id="ad-sim-out"></p>
+        </fieldset>
+
+        <p class="disclaimer">⚠️ Alat bantu hitung — bukan ajakan average down. Average down menambah
+          risiko bila fundamental/tren memburuk. Evaluasi harga wajar & teknikal dulu; pertimbangkan split porto.</p>
+      </section>
+    </div><!-- /view-avgdown -->
   </main>
 
   <footer class="footer">
