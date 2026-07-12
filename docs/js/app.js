@@ -6,6 +6,7 @@ import {
 import { renderTrendChart } from "./chart.js";
 import { ambilHargaIDX } from "./idx-price.js";
 import { muatPraAmbil, fetchFMP } from "./data-fetch.js";
+import { initAvgDown } from "./avgdown.js";
 
 const $ = (id) => document.getElementById(id);
 const BOBOT = { kualitatif: 0.35, kuantitatif: 0.35, valuasi: 0.30 };
@@ -531,8 +532,20 @@ async function initDatalist() {
   } catch (_) { /* index belum ada — abaikan */ }
 }
 
+// ---------- Tab / menu ----------
+function pilihTab(nama) {
+  const analisis = nama === "analisis";
+  $("view-analisis").hidden = !analisis;
+  $("view-avgdown").hidden = analisis;
+  $("tab-analisis").classList.toggle("active", analisis);
+  $("tab-avgdown").classList.toggle("active", !analisis);
+}
+$("tab-analisis").addEventListener("click", () => pilihTab("analisis"));
+$("tab-avgdown").addEventListener("click", () => pilihTab("avgdown"));
+
 // ---------- Init ----------
 initTema();
 initSettings();
 initDatalist();
 tambahKartuTahun();
+initAvgDown();

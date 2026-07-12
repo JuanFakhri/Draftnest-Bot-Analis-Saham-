@@ -32,6 +32,7 @@ matematika keuangan dihitung di JavaScript, dan interpretasi 3 pilar memanggil
 - Mode **siang & malam** (elegan, responsif)
 - **Ambil Data Otomatis** — ketik kode emiten → profil + 5 tahun laporan + harga terisi otomatis
 - **Grafik tren rasio** (ROE/ROA/Net Margin) — SVG interaktif dengan crosshair + tooltip
+- **Menu Average Down** — kalkulator harga rata-rata setelah average down, untung/rugi, risiko porto, + simulasi lot untuk turunkan rata-rata ke target
 - **Fair Value (Mean PER & PBV)** — harga wajar dari rata-rata PER/PBV historis emiten + Margin of Safety
 - **Proyeksi tahun mendatang** (CAGR) + **outlook AI** forward-looking
 - **Ambil Harga IDX real-time** (Yahoo Finance `.JK` via CORS-proxy, best-effort)
