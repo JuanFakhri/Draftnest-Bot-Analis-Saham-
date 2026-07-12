@@ -14,6 +14,7 @@ from typing import Any, Optional
 
 from . import forecast as F
 from . import ratios as R
+from . import scoring as S
 from . import valuation as V
 from .analyzers import (
     analisis_kualitatif,
@@ -50,7 +51,7 @@ def _rata_skor(hasil: Optional[dict[str, Any]], field_poin: list[str]) -> Option
 
 def _rekomendasi(skor: Optional[float], status_valuasi: Optional[str]) -> str:
     if skor is None:
-        return "TAHAN (data LLM tidak tersedia — hanya olah data kuantitatif)"
+        return "TAHAN (data tidak cukup untuk memberi skor)"
 
     if skor >= 7.5:
         rec = "BELI"
@@ -71,8 +72,16 @@ def jalankan_analisis(emiten: Emiten, client: Optional[ClaudeClient]) -> HasilAn
     proyeksi = F.proyeksi_tahun_depan(emiten)
     valu = V.analisis_valuasi(emiten) if emiten.pasar else None
 
-    # Langkah 3 — kirim ke Claude (opsional; dilewati bila offline).
-    kual_llm = kuant_llm = valu_llm = None
+    # Langkah 2b — skor deterministik dari data (tanpa AI). Ini yang membuat
+    # analisis bisa jalan penuh hanya dari angka bila datanya lengkap.
+    kuant_det, valu_det = S.analisis_deterministik(emiten, kuant, valu, proyeksi)
+
+    # Langkah 3 — kirim ke Claude (opsional). Kualitatif selalu butuh AI
+    # (naratif). Kuantitatif & valuasi memakai skor deterministik sebagai dasar;
+    # bila client tersedia, hasil LLM menimpa (interpretasi lebih kaya).
+    kual_llm = None
+    kuant_llm = kuant_det
+    valu_llm = valu_det
     if client is not None:
         kual_llm = analisis_kualitatif(client, emiten)
         kuant_llm = analisis_kuantitatif_llm(client, emiten.profil.kode, kuant)
