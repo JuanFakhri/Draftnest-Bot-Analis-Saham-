@@ -33,6 +33,9 @@
       <label>Model
         <input id="model" type="text" value="claude-opus-4-8" />
       </label>
+      <label>API Key Financial Modeling Prep <span style="opacity:.7">(opsional — fallback live)</span>
+        <input id="fmp-key" type="password" placeholder="untuk emiten di luar watchlist" autocomplete="off" />
+      </label>
       <p class="hint">
         🔒 Key disimpan <strong>hanya di browser Anda</strong> (localStorage) dan dikirim
         langsung ke api.anthropic.com. Tidak ada server perantara. Dapatkan key di
@@ -61,6 +64,13 @@
       <!-- Profil -->
       <fieldset class="group">
         <legend>Profil (Pilar Kualitatif)</legend>
+        <div class="autofetch">
+          <input id="fetch-kode" type="text" list="kode-list" placeholder="Ketik kode emiten, mis. BBCA" />
+          <datalist id="kode-list"></datalist>
+          <button id="btn-autofetch" class="btn btn-primary" type="button">🔎 Ambil Data Otomatis</button>
+          <label class="inline-check"><input id="auto-ai" type="checkbox" /> analisa AI otomatis</label>
+        </div>
+        <p id="fetch-note" class="hint" role="status" aria-live="polite"></p>
         <div class="grid grid-3">
           <label>Kode<input id="p-kode" type="text" placeholder="ICBP" /></label>
           <label>Nama<input id="p-nama" type="text" placeholder="Nama emiten" /></label>

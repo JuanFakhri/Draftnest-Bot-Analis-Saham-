@@ -12,6 +12,7 @@ from __future__ import annotations
 from dataclasses import dataclass
 from typing import Any, Optional
 
+from . import forecast as F
 from . import ratios as R
 from . import valuation as V
 from .analyzers import (
@@ -30,6 +31,7 @@ BOBOT = {"kualitatif": 0.35, "kuantitatif": 0.35, "valuasi": 0.30}
 class HasilAnalisis:
     emiten: Emiten
     kuantitatif_data: R.RingkasanKuantitatif
+    proyeksi_data: F.HasilProyeksi
     valuasi_data: Optional[V.HasilValuasi]
     kualitatif_llm: Optional[dict[str, Any]]
     kuantitatif_llm: Optional[dict[str, Any]]
@@ -66,6 +68,7 @@ def _rekomendasi(skor: Optional[float], status_valuasi: Optional[str]) -> str:
 def jalankan_analisis(emiten: Emiten, client: Optional[ClaudeClient]) -> HasilAnalisis:
     # Langkah 2 — olah data deterministik.
     kuant = R.analisis_kuantitatif(emiten)
+    proyeksi = F.proyeksi_tahun_depan(emiten)
     valu = V.analisis_valuasi(emiten) if emiten.pasar else None
 
     # Langkah 3 — kirim ke Claude (opsional; dilewati bila offline).
@@ -74,7 +77,7 @@ def jalankan_analisis(emiten: Emiten, client: Optional[ClaudeClient]) -> HasilAn
         kual_llm = analisis_kualitatif(client, emiten)
         kuant_llm = analisis_kuantitatif_llm(client, emiten.profil.kode, kuant)
         if valu is not None:
-            valu_llm = analisis_valuasi_llm(client, emiten.profil.kode, valu)
+            valu_llm = analisis_valuasi_llm(client, emiten.profil.kode, valu, proyeksi)
 
     # Langkah 4 — agregasi skor.
     skor_pilar: dict[str, Optional[float]] = {
@@ -101,6 +104,7 @@ def jalankan_analisis(emiten: Emiten, client: Optional[ClaudeClient]) -> HasilAn
     return HasilAnalisis(
         emiten=emiten,
         kuantitatif_data=kuant,
+        proyeksi_data=proyeksi,
         valuasi_data=valu,
         kualitatif_llm=kual_llm,
         kuantitatif_llm=kuant_llm,

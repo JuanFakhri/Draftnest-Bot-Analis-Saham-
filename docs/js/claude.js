@@ -167,12 +167,25 @@ const SKEMA_VAL = skemaPilar(
       description: "Kesimpulan status harga terhadap nilai wajar.",
     },
     kesimpulan_valuasi: { type: "string", description: "Ringkasan 2-4 kalimat." },
+    outlook_tahun_depan: {
+      type: "string",
+      description: "Outlook 2-4 kalimat untuk tahun mendatang berdasar proyeksi tren + risiko utamanya.",
+    },
   }
 );
 
+function teksProyeksi(proyeksi) {
+  if (!proyeksi || !proyeksi.proyeksi.length) return "(proyeksi tak tersedia)";
+  const baris = proyeksi.proyeksi.map((p) =>
+    `  ${p.tahun}: pendapatan ~${Math.round(p.pendapatan).toLocaleString("id-ID")}, ` +
+    `laba bersih ~${Math.round(p.laba_bersih).toLocaleString("id-ID")}` +
+    (p.net_margin != null ? `, margin ~${(p.net_margin * 100).toFixed(1)}%` : "")).join("\n");
+  return `CAGR pendapatan ${pct(proyeksi.cagr_pendapatan)}, CAGR laba ${pct(proyeksi.cagr_laba)}\n${baris}`;
+}
+
 const rp = (x) => (x != null ? "Rp" + Math.round(x).toLocaleString("id-ID") : "n/a");
 
-export function analisisValuasiLLM(apiKey, model, kode, v) {
+export function analisisValuasiLLM(apiKey, model, kode, v, proyeksi) {
   const r = v.relative;
   const a = v.absolute;
   const prompt =
@@ -191,8 +204,12 @@ Asumsi : growth ${pct(a.growth_rate)}, discount ${pct(a.discount_rate)}, termina
 Nilai intrinsik : ${rp(a.nilai_intrinsik_per_saham)} per lembar
 Margin of safety : ${pct(v.margin_of_safety)} (positif = harga di bawah nilai intrinsik)
 
+== Proyeksi Tahun Mendatang (ekstrapolasi CAGR) ==
+${teksProyeksi(proyeksi)}
+
 Beri skor 1-10 (10 = paling menarik/undervalued) + justifikasi untuk relative_valuation
-dan absolute_valuation. Tentukan status: undervalued/fairvalued/overvalued.
-Ingatkan bila hasil DCF sangat sensitif terhadap asumsi.`;
+dan absolute_valuation. Tentukan status: undervalued/fairvalued/overvalued. Isi
+'outlook_tahun_depan' dengan pandangan ke depan berdasar proyeksi di atas plus risiko
+utamanya. Ingatkan bila DCF/proyeksi sangat sensitif terhadap asumsi.`;
   return panggilClaude(apiKey, model, SYS_VAL, prompt, SKEMA_VAL);
 }
