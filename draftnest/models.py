@@ -87,6 +87,11 @@ class DataPasar:
     terminal_growth: float = 0.03    # pertumbuhan terminal (Gordon)
     tahun_proyeksi: int = 5
 
+    # Dividen (opsional) — dipakai screener saham high-dividend.
+    dividend_yield: Optional[float] = None     # yield tahunan sbg fraksi (0.08 = 8%)
+    dividen_per_saham: Optional[float] = None  # dividen per lembar (12 bln terakhir)
+    dividen_beruntun: int = 0                  # jumlah tahun berturut membagi dividen
+
 
 @dataclass
 class Emiten:

@@ -13,7 +13,7 @@ on:
       mode:
         description: "Mode pengambilan"
         type: choice
-        options: ["all-resume", "all-refresh", "watchlist", "tickers", "list-only"]
+        options: ["all-resume", "all-refresh", "watchlist", "tickers", "list-only", "screener-only"]
         default: "all-resume"
       tickers:
         description: "Kode emiten (spasi-pisah) — hanya untuk mode 'tickers'"
@@ -42,11 +42,12 @@ jobs:
         run: |
           MODE="${{ github.event.inputs.mode }}"
           case "$MODE" in
-            all-refresh) python -m draftnest.pipeline --all --delay 0.5 ;;
-            watchlist)   python -m draftnest.pipeline ;;
-            tickers)     python -m draftnest.pipeline ${{ github.event.inputs.tickers }} ;;
-            list-only)   python -m draftnest.pipeline --all --list-only ;;
-            *)           python -m draftnest.pipeline --all --resume --delay 0.5 ;;
+            all-refresh)   python -m draftnest.pipeline --all --delay 0.5 ;;
+            watchlist)     python -m draftnest.pipeline ;;
+            tickers)       python -m draftnest.pipeline ${{ github.event.inputs.tickers }} ;;
+            list-only)     python -m draftnest.pipeline --all --list-only ;;
+            screener-only) python -m draftnest.pipeline --screener-only ;;
+            *)             python -m draftnest.pipeline --all --resume --delay 0.5 ;;
           esac
       - name: Commit perubahan data
         run: |
@@ -55,7 +56,15 @@ jobs:
           if [ -n "$(git status --porcelain docs/data data/idx_tickers.txt)" ]; then
             git add docs/data data/idx_tickers.txt
             git commit -m "data: perbarui data emiten (otomatis)"
-            git push
+            # Rebase dulu supaya push tak ditolak bila main berpindah selama
+            # run (mis. ada PR ter-merge di tengah proses fetch ~30 menit).
+            for i in 1 2 3 4 5; do
+              git pull --rebase --autostash origin "${GITHUB_REF_NAME}" || true
+              if git push origin "HEAD:${GITHUB_REF_NAME}"; then
+                echo "Push berhasil pada percobaan $i."; break
+              fi
+              echo "Push ditolak, coba lagi ($i)…"; sleep 5
+            done
           else
             echo "Tidak ada perubahan data."
           fi

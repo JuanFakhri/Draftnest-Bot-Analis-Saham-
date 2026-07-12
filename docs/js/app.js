@@ -8,6 +8,7 @@ import { renderTrendChart } from "./chart.js";
 import { ambilHargaIDX } from "./idx-price.js";
 import { muatPraAmbil, fetchFMP } from "./data-fetch.js";
 import { initAvgDown } from "./avgdown.js";
+import { initScreener } from "./screener.js";
 
 const $ = (id) => document.getElementById(id);
 const BOBOT = { kualitatif: 0.35, kuantitatif: 0.35, valuasi: 0.30 };
@@ -597,15 +598,25 @@ async function initDatalist() {
 }
 
 // ---------- Tab / menu ----------
+const TABS = ["analisis", "screener", "avgdown"];
 function pilihTab(nama) {
-  const analisis = nama === "analisis";
-  $("view-analisis").hidden = !analisis;
-  $("view-avgdown").hidden = analisis;
-  $("tab-analisis").classList.toggle("active", analisis);
-  $("tab-avgdown").classList.toggle("active", !analisis);
+  for (const t of TABS) {
+    const aktif = t === nama;
+    $(`view-${t}`).hidden = !aktif;
+    $(`tab-${t}`).classList.toggle("active", aktif);
+  }
 }
 $("tab-analisis").addEventListener("click", () => pilihTab("analisis"));
+$("tab-screener").addEventListener("click", () => pilihTab("screener"));
 $("tab-avgdown").addEventListener("click", () => pilihTab("avgdown"));
+
+// Dari Screener: klik baris -> muat emiten ke tab Analisis lalu jalankan.
+async function pilihDariScreener(kode) {
+  pilihTab("analisis");
+  $("fetch-kode").value = kode;
+  $("p-kode").value = kode;
+  $("btn-autofetch").click();
+}
 
 // ---------- Init ----------
 initTema();
@@ -613,3 +624,4 @@ initSettings();
 initDatalist();
 tambahKartuTahun();
 initAvgDown();
+initScreener(pilihDariScreener);

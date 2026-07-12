@@ -71,6 +71,7 @@ def jalankan(
             time.sleep(delay)
 
     _tulis_index(out_dir)
+    _tulis_screener(out_dir)
     print(f"\nSelesai: {len(indeks)} sukses, {len(gagal)} gagal, {dilewati} dilewati.")
     # Sukses bila ada yang tertulis, atau semua memang sudah ada (resume).
     return 0 if (indeks or dilewati) else 1
@@ -98,6 +99,32 @@ def _tulis_index(out_dir: Path) -> None:
     )
 
 
+def _tulis_screener(out_dir: Path) -> None:
+    """Bangun screener.json (ringkasan metrik semua emiten) untuk fitur Screener."""
+    from .data_loader import muat_emiten
+    from .screener import ringkas_emiten
+
+    ringkasan: list[dict] = []
+    for f in sorted(out_dir.glob("*.json")):
+        if f.name in ("index.json", "screener.json"):
+            continue
+        try:
+            emiten = muat_emiten(f)
+            if not emiten.laporan:
+                continue
+            ringkasan.append(ringkas_emiten(emiten))
+        except Exception:
+            continue
+    (out_dir / "screener.json").write_text(
+        json.dumps(
+            {"diperbarui": date.today().isoformat(), "emiten": ringkasan},
+            ensure_ascii=False, indent=2,
+        ),
+        encoding="utf-8",
+    )
+    print(f"screener.json: {len(ringkasan)} emiten diringkas.")
+
+
 def _refresh_fallback(kode_list: list[str]) -> None:
     """Simpan daftar universe ke data/idx_tickers.txt sebagai cache fallback."""
     if not kode_list:
@@ -115,10 +142,18 @@ def main(argv: list[str] | None = None) -> int:
     ap.add_argument("--all", action="store_true", help="Ambil SELURUH emiten IDX.")
     ap.add_argument("--resume", action="store_true", help="Lewati kode yang JSON-nya sudah ada.")
     ap.add_argument("--list-only", action="store_true", help="Hanya cetak jumlah universe, tanpa fetch.")
+    ap.add_argument("--screener-only", action="store_true",
+                    help="Regenerasi index.json & screener.json dari file yang ada, tanpa fetch.")
     ap.add_argument("--limit", type=int, default=0, help="Batasi jumlah kode (untuk uji).")
     ap.add_argument("--delay", type=float, default=0.4, help="Jeda antar-permintaan (detik).")
     ap.add_argument("--out", default=str(OUT_DIR), help="Direktori output JSON.")
     args = ap.parse_args(argv)
+
+    if args.screener_only:
+        out_dir = Path(args.out)
+        _tulis_index(out_dir)
+        _tulis_screener(out_dir)
+        return 0
 
     if args.all:
         kode_list = daftar_emiten()
