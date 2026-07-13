@@ -35,6 +35,9 @@ class TestBacktestS2(unittest.TestCase):
         self.assertEqual(bt["s2"]["menang"], 1)
         self.assertEqual(bt["s2"]["hit3"], 1)      # overnight +4% >= 3%
         self.assertAlmostEqual(bt["s2"]["ret_total"], 0.04, places=4)
+        # Gabungan: S1 & S2 bertentangan -> AND selalu 0; OR = union (di sini = S2).
+        self.assertEqual(bt["s_and"]["sinyal"], 0)
+        self.assertEqual(bt["s_or"]["sinyal"], bt["s1"]["sinyal"] + bt["s2"]["sinyal"])
 
     def test_volume_terlalu_besar_gagal(self):
         opens, closes, vols = self._series()

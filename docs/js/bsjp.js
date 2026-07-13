@@ -16,7 +16,11 @@ const INFO_STRATEGI = {
   s1: "RSI(14) 25–50, volume ≥2× kemarin, return hari −5%…+1%, harga ≥100, market cap ≥Rp500 M, value ≥Rp1 M. " +
       "⚠️ Syarat asli 'Foreign Flow > 0' TIDAK tersedia dari sumber data, jadi backtest ini tanpa syarat itu.",
   s2: "Harga naik >5% dari kemarin, harga ≥ MA5, volume <1,2× kemarin, value ≥Rp5 M.",
+  s_or: "Hari yang memenuhi Strategi 1 ATAU Strategi 2 (gabungan sinyal keduanya).",
+  s_and: "Hari yang memenuhi Strategi 1 DAN Strategi 2 sekaligus. ⚠️ Keduanya BERTENTANGAN " +
+         "(S1 minta hari turun/flat, S2 minta hari naik >5%), jadi hasilnya hampir selalu 0 sinyal.",
 };
+const FLAG_STRATEGI = { s1: "strat1_sinyal", s2: "strat2_sinyal", s_or: "strat_or_sinyal", s_and: "strat_and_sinyal" };
 
 function bacaKriteriaGap() {
   const persen = (id) => { const v = parseFloat($(id).value); return isFinite(v) ? v / 100 : null; };
@@ -77,13 +81,13 @@ function render() {
       .sort((a, b) => (b.bsjp_peluang || 0) - (a.bsjp_peluang || 0));
     judul = "peluang gap ≥3% tertinggi";
   } else {
-    const flag = mode === "s1" ? "strat1_sinyal" : "strat2_sinyal";
+    const flag = FLAG_STRATEGI[mode];
     hasil = DATA.emiten.filter((r) => r[flag])
       .sort((a, b) => (b.bsjp_peluang || 0) - (a.bsjp_peluang || 0));
     judul = "yang memicu sinyal strategi pada data terakhir";
   }
 
-  const adaSinyalData = mode === "gap" || DATA.emiten.some((r) => r.strat1_sinyal != null || r.strat2_sinyal != null);
+  const adaSinyalData = mode === "gap" || DATA.emiten.some((r) => r[FLAG_STRATEGI[mode]] != null);
   if (!adaSinyalData) {
     $("bs-status").textContent = "Data sinyal strategi belum tersedia — akan terisi setelah pembaruan data harga.";
     $("bs-result").innerHTML = ""; return;
