@@ -26,6 +26,36 @@
     "dividen_per_saham": null,
     "dividen_beruntun": 0
   },
+  "backtest": {
+    "s1": {
+      "sinyal": 0,
+      "menang": 0,
+      "hit3": 0,
+      "ret_total": 0.0,
+      "sinyal_terakhir": false
+    },
+    "s2": {
+      "sinyal": 2,
+      "menang": 0,
+      "hit3": 0,
+      "ret_total": 0.0,
+      "sinyal_terakhir": false
+    },
+    "s_and": {
+      "sinyal": 0,
+      "menang": 0,
+      "hit3": 0,
+      "ret_total": 0.0,
+      "sinyal_terakhir": false
+    },
+    "s_or": {
+      "sinyal": 2,
+      "menang": 0,
+      "hit3": 0,
+      "ret_total": 0.0,
+      "sinyal_terakhir": false
+    }
+  },
   "harian": {
     "sampel_hari": 252,
     "peluang_naik_target": 0.04365079365079365,
@@ -34,7 +64,7 @@
     "median_gap": 0.0,
     "rata_gap_positif": 0.018961897519910273,
     "volatilitas_gap": 0.019120317255850817,
-    "volume_rata": 4891262.055335969,
+    "volume_rata": 4891116.600790514,
     "target": 0.03
   }
 }

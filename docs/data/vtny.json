@@ -23,8 +23,8 @@
       "laba_operasi": 5285658.0,
       "laba_bersih": 748576446.0,
       "arus_kas_operasi": 0.0,
-      "arus_kas_investasi": -88604605019.0,
-      "arus_kas_pendanaan": 478755741912.0
+      "arus_kas_investasi": 0.0,
+      "arus_kas_pendanaan": 0.0
     },
     {
       "tahun": 2023,
@@ -38,8 +38,8 @@
       "laba_operasi": 92887427.0,
       "laba_bersih": 1618270202.0,
       "arus_kas_operasi": 0.0,
-      "arus_kas_investasi": -91777627393.0,
-      "arus_kas_pendanaan": 176080633206.0
+      "arus_kas_investasi": 0.0,
+      "arus_kas_pendanaan": 0.0
     },
     {
       "tahun": 2024,
@@ -53,8 +53,8 @@
       "laba_operasi": 49733684.0,
       "laba_bersih": 10541237725.0,
       "arus_kas_operasi": 0.0,
-      "arus_kas_investasi": -58710107653.0,
-      "arus_kas_pendanaan": 214759562990.0
+      "arus_kas_investasi": 0.0,
+      "arus_kas_pendanaan": 0.0
     },
     {
       "tahun": 2025,
@@ -68,8 +68,8 @@
       "laba_operasi": 59128180771.0,
       "laba_bersih": 6358730813.0,
       "arus_kas_operasi": 0.0,
-      "arus_kas_investasi": -979384390.0,
-      "arus_kas_pendanaan": 499474168684.0
+      "arus_kas_investasi": 0.0,
+      "arus_kas_pendanaan": 0.0
     }
   ],
   "pasar": {
@@ -86,6 +86,36 @@
     "dividend_yield": null,
     "dividen_per_saham": null,
     "dividen_beruntun": 0
+  },
+  "backtest": {
+    "s1": {
+      "sinyal": 9,
+      "menang": 3,
+      "hit3": 0,
+      "ret_total": -0.08637808059243174,
+      "sinyal_terakhir": false
+    },
+    "s2": {
+      "sinyal": 14,
+      "menang": 12,
+      "hit3": 2,
+      "ret_total": 0.20254205773196562,
+      "sinyal_terakhir": false
+    },
+    "s_and": {
+      "sinyal": 0,
+      "menang": 0,
+      "hit3": 0,
+      "ret_total": 0.0,
+      "sinyal_terakhir": false
+    },
+    "s_or": {
+      "sinyal": 23,
+      "menang": 15,
+      "hit3": 2,
+      "ret_total": 0.11616397713953389,
+      "sinyal_terakhir": false
+    }
   },
   "harian": {
     "sampel_hari": 252,

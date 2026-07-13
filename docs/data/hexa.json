@@ -83,9 +83,39 @@
     "discount_rate": 0.11,
     "terminal_growth": 0.03,
     "tahun_proyeksi": 5,
-    "dividend_yield": 0.10724464908256881,
-    "dividen_per_saham": 467.58667,
+    "dividend_yield": 0.10745837614678899,
+    "dividen_per_saham": 468.51852,
     "dividen_beruntun": 23
+  },
+  "backtest": {
+    "s1": {
+      "sinyal": 57,
+      "menang": 21,
+      "hit3": 1,
+      "ret_total": 0.11124620859482444,
+      "sinyal_terakhir": false
+    },
+    "s2": {
+      "sinyal": 1,
+      "menang": 1,
+      "hit3": 0,
+      "ret_total": 1.9340294742109167e-08,
+      "sinyal_terakhir": false
+    },
+    "s_and": {
+      "sinyal": 0,
+      "menang": 0,
+      "hit3": 0,
+      "ret_total": 0.0,
+      "sinyal_terakhir": false
+    },
+    "s_or": {
+      "sinyal": 58,
+      "menang": 22,
+      "hit3": 1,
+      "ret_total": 0.11124622793511917,
+      "sinyal_terakhir": false
+    }
   },
   "harian": {
     "sampel_hari": 252,

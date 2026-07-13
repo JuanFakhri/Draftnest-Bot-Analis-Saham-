@@ -87,6 +87,36 @@
     "dividen_per_saham": 60.0,
     "dividen_beruntun": 25
   },
+  "backtest": {
+    "s1": {
+      "sinyal": 81,
+      "menang": 49,
+      "hit3": 1,
+      "ret_total": 0.10538688304374122,
+      "sinyal_terakhir": false
+    },
+    "s2": {
+      "sinyal": 7,
+      "menang": 3,
+      "hit3": 0,
+      "ret_total": -0.05065856694463348,
+      "sinyal_terakhir": false
+    },
+    "s_and": {
+      "sinyal": 0,
+      "menang": 0,
+      "hit3": 0,
+      "ret_total": 0.0,
+      "sinyal_terakhir": false
+    },
+    "s_or": {
+      "sinyal": 88,
+      "menang": 52,
+      "hit3": 1,
+      "ret_total": 0.05472831609910776,
+      "sinyal_terakhir": false
+    }
+  },
   "harian": {
     "sampel_hari": 252,
     "peluang_naik_target": 0.007936507936507936,

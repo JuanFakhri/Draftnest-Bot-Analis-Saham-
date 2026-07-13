@@ -10,38 +10,7 @@
     "prospek_industri": "",
     "berita_terkini": ""
   },
-  "laporan": [
-    {
-      "tahun": 2021,
-      "total_aset": 387392983693.0,
-      "aset_lancar": 196811596760.0,
-      "total_liabilitas": 226757176796.0,
-      "liabilitas_lancar": 160516478275.0,
-      "total_ekuitas": 160616093878.0,
-      "pendapatan": 0.0,
-      "laba_kotor": 0.0,
-      "laba_operasi": 0.0,
-      "laba_bersih": 0.0,
-      "arus_kas_operasi": 0.0,
-      "arus_kas_investasi": 0.0,
-      "arus_kas_pendanaan": 0.0
-    },
-    {
-      "tahun": 2022,
-      "total_aset": 245995354738.0,
-      "aset_lancar": 68876432426.0,
-      "total_liabilitas": 259606511989.0,
-      "liabilitas_lancar": 195952946331.0,
-      "total_ekuitas": -13635533879.0,
-      "pendapatan": 0.0,
-      "laba_kotor": 0.0,
-      "laba_operasi": 0.0,
-      "laba_bersih": 0.0,
-      "arus_kas_operasi": 0.0,
-      "arus_kas_investasi": 0.0,
-      "arus_kas_pendanaan": 0.0
-    }
-  ],
+  "laporan": [],
   "pasar": {
     "harga_saham": 52.0,
     "saham_beredar": 2032540032.0,
@@ -56,5 +25,35 @@
     "dividend_yield": null,
     "dividen_per_saham": null,
     "dividen_beruntun": 0
+  },
+  "backtest": {
+    "s1": {
+      "sinyal": 0,
+      "menang": 0,
+      "hit3": 0,
+      "ret_total": 0.0,
+      "sinyal_terakhir": false
+    },
+    "s2": {
+      "sinyal": 0,
+      "menang": 0,
+      "hit3": 0,
+      "ret_total": 0.0,
+      "sinyal_terakhir": false
+    },
+    "s_and": {
+      "sinyal": 0,
+      "menang": 0,
+      "hit3": 0,
+      "ret_total": 0.0,
+      "sinyal_terakhir": false
+    },
+    "s_or": {
+      "sinyal": 0,
+      "menang": 0,
+      "hit3": 0,
+      "ret_total": 0.0,
+      "sinyal_terakhir": false
+    }
   }
 }

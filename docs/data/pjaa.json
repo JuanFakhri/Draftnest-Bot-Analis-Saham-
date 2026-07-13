@@ -23,8 +23,8 @@
       "laba_operasi": 316261000000.0,
       "laba_bersih": 154228000000.0,
       "arus_kas_operasi": 0.0,
-      "arus_kas_investasi": -126367000000.0,
-      "arus_kas_pendanaan": -524732000000.0
+      "arus_kas_investasi": 0.0,
+      "arus_kas_pendanaan": 0.0
     },
     {
       "tahun": 2023,
@@ -38,8 +38,8 @@
       "laba_operasi": 393310000000.0,
       "laba_bersih": 235173000000.0,
       "arus_kas_operasi": 0.0,
-      "arus_kas_investasi": -133586000000.0,
-      "arus_kas_pendanaan": -301646000000.0
+      "arus_kas_investasi": 0.0,
+      "arus_kas_pendanaan": 0.0
     },
     {
       "tahun": 2024,
@@ -53,8 +53,8 @@
       "laba_operasi": 340600000000.0,
       "laba_bersih": 177791000000.0,
       "arus_kas_operasi": 0.0,
-      "arus_kas_investasi": -159867000000.0,
-      "arus_kas_pendanaan": -129205000000.0
+      "arus_kas_investasi": 0.0,
+      "arus_kas_pendanaan": 0.0
     },
     {
       "tahun": 2025,
@@ -68,8 +68,8 @@
       "laba_operasi": 199630000000.0,
       "laba_bersih": 180194000000.0,
       "arus_kas_operasi": 0.0,
-      "arus_kas_investasi": -88120000000.0,
-      "arus_kas_pendanaan": -104515000000.0
+      "arus_kas_investasi": 0.0,
+      "arus_kas_pendanaan": 0.0
     }
   ],
   "pasar": {
@@ -86,6 +86,36 @@
     "dividend_yield": 0.0566304347826087,
     "dividen_per_saham": 26.05,
     "dividen_beruntun": 4
+  },
+  "backtest": {
+    "s1": {
+      "sinyal": 1,
+      "menang": 1,
+      "hit3": 0,
+      "ret_total": 0.004115233898246782,
+      "sinyal_terakhir": false
+    },
+    "s2": {
+      "sinyal": 0,
+      "menang": 0,
+      "hit3": 0,
+      "ret_total": 0.0,
+      "sinyal_terakhir": false
+    },
+    "s_and": {
+      "sinyal": 0,
+      "menang": 0,
+      "hit3": 0,
+      "ret_total": 0.0,
+      "sinyal_terakhir": false
+    },
+    "s_or": {
+      "sinyal": 1,
+      "menang": 1,
+      "hit3": 0,
+      "ret_total": 0.004115233898246782,
+      "sinyal_terakhir": false
+    }
   },
   "harian": {
     "sampel_hari": 252,
