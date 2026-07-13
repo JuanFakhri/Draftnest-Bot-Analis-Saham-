@@ -11,7 +11,7 @@ from __future__ import annotations
 
 from typing import Any, Optional
 
-from .models import DataPasar, Emiten, LaporanTahunan, ProfilEmiten
+from .models import DataPasar, Emiten, LaporanTahunan, ProfilEmiten, StatistikHarian
 
 # Kandidat label baris yfinance -> field LaporanTahunan.
 # yfinance memakai label berbeda antar versi/emiten; coba berurutan.
@@ -134,9 +134,12 @@ def fetch_emiten(kode: str, tahun_maks: int = 5) -> Emiten:
     pasar: Optional[DataPasar] = None
     harga = info.get("currentPrice") or info.get("regularMarketPrice") or info.get("previousClose")
     saham = info.get("sharesOutstanding")
+    harian: Optional[StatistikHarian] = None
     if harga and saham:
-        mean_per, mean_pbv = _mean_per_pbv(tkr, laporan, float(saham), n=3)
+        hist = _safe(lambda: tkr.history(period="6y"))  # sekali tarik, dipakai ulang
+        mean_per, mean_pbv = _mean_per_pbv(laporan, float(saham), hist, n=3)
         div_yield, div_ps, div_streak = _dividen(tkr, float(harga), info)
+        harian = _bsjp_stats(hist)
         pasar = DataPasar(
             harga_saham=float(harga),
             saham_beredar=float(saham),
@@ -155,7 +158,7 @@ def fetch_emiten(kode: str, tahun_maks: int = 5) -> Emiten:
             f"tidak terdaftar, atau rate-limit."
         )
 
-    return Emiten(profil=profil, laporan=laporan, pasar=pasar)
+    return Emiten(profil=profil, laporan=laporan, pasar=pasar, harian=harian)
 
 
 def _safe(fn):
@@ -205,18 +208,62 @@ def _dividen(tkr, harga: float, info: dict):
     return div_yield, div_ps, streak
 
 
-def _mean_per_pbv(tkr, laporan, saham: float, n: int = 3):
+def _bsjp_stats(hist, target: float = 0.03, lookback: int = 252) -> Optional[StatistikHarian]:
+    """Statistik overnight gap (close[t-1] -> open[t]) untuk strategi BSJP.
+
+    "Beli Sore, Jual Pagi": beli di harga penutupan, jual di pembukaan besok.
+    Return per hari = (Open[t] - Close[t-1]) / Close[t-1]. Dihitung atas
+    `lookback` hari terakhir (default ~1 tahun bursa). None bila data kurang.
+    """
+    if hist is None or getattr(hist, "empty", True):
+        return None
+    if "Open" not in hist or "Close" not in hist:
+        return None
+    try:
+        h = hist.tail(lookback + 1)
+        opens = [float(x) for x in h["Open"].tolist()]
+        closes = [float(x) for x in h["Close"].tolist()]
+        vols = [float(x) for x in h["Volume"].tolist()] if "Volume" in h else []
+        gaps = []
+        for i in range(1, len(closes)):
+            prev = closes[i - 1]
+            if prev and prev > 0 and opens[i] and opens[i] > 0:
+                gaps.append((opens[i] - prev) / prev)
+    except Exception:
+        return None
+
+    n = len(gaps)
+    if n < 30:  # sampel terlalu kecil untuk bermakna
+        return None
+    rata = sum(gaps) / n
+    urut = sorted(gaps)
+    median = urut[n // 2] if n % 2 else (urut[n // 2 - 1] + urut[n // 2]) / 2
+    positif = [g for g in gaps if g > 0]
+    var = sum((g - rata) ** 2 for g in gaps) / (n - 1)
+    return StatistikHarian(
+        sampel_hari=n,
+        peluang_naik_target=sum(1 for g in gaps if g >= target) / n,
+        win_rate=len(positif) / n,
+        rata_gap=rata,
+        median_gap=median,
+        rata_gap_positif=(sum(positif) / len(positif)) if positif else None,
+        volatilitas_gap=var ** 0.5,
+        volume_rata=(sum(vols) / len(vols)) if vols else None,
+        target=target,
+    )
+
+
+def _mean_per_pbv(laporan, saham: float, hist, n: int = 3):
     """Rata-rata PER & PBV `n` tahun terakhir dari harga historis Yahoo.
 
     Pendekatan: harga rata-rata per tahun kalender (mean close) dibagi EPS/BVPS
     tahun itu. Saham beredar diasumsikan tetap (aproksimasi wajar). None bila
-    data tak cukup.
+    data tak cukup. `hist` = DataFrame riwayat harga (sudah ditarik di luar).
     """
     if not laporan or saham <= 0:
         return None, None
     try:
-        hist = tkr.history(period="6y")
-        if hist is None or hist.empty or "Close" not in hist:
+        if hist is None or getattr(hist, "empty", True) or "Close" not in hist:
             return None, None
         close = hist["Close"]
         harga_per_tahun = {int(idx.year): float(val) for idx, val in close.groupby(close.index.year).mean().items()}

@@ -9,6 +9,7 @@ import { ambilHargaIDX } from "./idx-price.js";
 import { muatPraAmbil, fetchFMP } from "./data-fetch.js";
 import { initAvgDown } from "./avgdown.js";
 import { initScreener } from "./screener.js";
+import { initBSJP } from "./bsjp.js";
 
 const $ = (id) => document.getElementById(id);
 const BOBOT = { kualitatif: 0.35, kuantitatif: 0.35, valuasi: 0.30 };
@@ -598,7 +599,7 @@ async function initDatalist() {
 }
 
 // ---------- Tab / menu ----------
-const TABS = ["analisis", "screener", "avgdown"];
+const TABS = ["analisis", "screener", "bsjp", "avgdown"];
 function pilihTab(nama) {
   for (const t of TABS) {
     const aktif = t === nama;
@@ -608,6 +609,7 @@ function pilihTab(nama) {
 }
 $("tab-analisis").addEventListener("click", () => pilihTab("analisis"));
 $("tab-screener").addEventListener("click", () => pilihTab("screener"));
+$("tab-bsjp").addEventListener("click", () => pilihTab("bsjp"));
 $("tab-avgdown").addEventListener("click", () => pilihTab("avgdown"));
 
 // Dari Screener: klik baris -> muat emiten ke tab Analisis lalu jalankan.
@@ -625,3 +627,4 @@ initDatalist();
 tambahKartuTahun();
 initAvgDown();
 initScreener(pilihDariScreener);
+initBSJP(pilihDariScreener);

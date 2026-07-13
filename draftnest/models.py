@@ -94,12 +94,30 @@ class DataPasar:
 
 
 @dataclass
+class StatistikHarian:
+    """Statistik overnight gap (close -> open berikutnya) untuk strategi BSJP.
+
+    Semua nilai berupa fraksi (0.03 = 3%). Dihitung dari riwayat harga harian.
+    """
+    sampel_hari: int                       # jumlah pasangan hari yang dihitung
+    peluang_naik_target: Optional[float]   # fraksi hari gap >= target (default 3%)
+    win_rate: Optional[float]              # fraksi hari gap > 0
+    rata_gap: Optional[float]              # rata-rata overnight return
+    median_gap: Optional[float]
+    rata_gap_positif: Optional[float]      # rata-rata gap saat positif
+    volatilitas_gap: Optional[float]       # stdev overnight return
+    volume_rata: Optional[float]           # rata-rata volume harian (likuiditas)
+    target: float = 0.03                   # target gap yang dipakai (fraksi)
+
+
+@dataclass
 class Emiten:
     """Gabungan seluruh input untuk satu emiten."""
 
     profil: ProfilEmiten
     laporan: list[LaporanTahunan] = field(default_factory=list)
     pasar: Optional[DataPasar] = None
+    harian: Optional[StatistikHarian] = None
 
     def laporan_terbaru(self) -> LaporanTahunan:
         if not self.laporan:

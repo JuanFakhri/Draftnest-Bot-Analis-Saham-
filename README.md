@@ -34,6 +34,7 @@ matematika keuangan dihitung di JavaScript, dan interpretasi 3 pilar memanggil
 - **Grafik tren rasio** (ROE/ROA/Net Margin) — SVG interaktif dengan crosshair + tooltip
 - **Menu Average Down** — kalkulator harga rata-rata setelah average down, untung/rugi, risiko porto, + simulasi lot untuk turunkan rata-rata ke target
 - **Screener Saham** — saring emiten yang pertumbuhannya naik tiap tahun, rutin bagi dividen (yield 7–15%, dapat diatur), dan prospek jangka panjang bagus (ROE tinggi/konsisten, utang terkendali, moat). Deterministik, tanpa AI
+- **BSJP (Beli Sore, Jual Pagi)** — peluang historis overnight gap: seberapa sering tiap saham naik ≥3% dari harga tutup ke pembukaan besoknya (±1 tahun), + win rate & likuiditas. **Bukan jaminan** — menahan semalam berisiko gap-down
 - **Fair Value (Mean PER & PBV)** — harga wajar dari rata-rata PER/PBV historis emiten + Margin of Safety
 - **Proyeksi tahun mendatang** (CAGR) — pendapatan, laba, margin
 - **Ramalan Harga Saham** — nilai wajar saat ini + target harga tiap tahun (EPS proyeksi × kelipatan P/E) + potensi upside/downside & CAGR harga. Deterministik, tanpa AI.
@@ -256,6 +257,7 @@ docs/              # website statis (GitHub Pages)
   js/finance.js    # port matematika keuangan ke browser
   js/scoring.js    # port skoring deterministik (tanpa AI) ke browser
   js/screener.js   # Screener saham (muat screener.json, saring di browser)
+  js/bsjp.js       # menu BSJP (Beli Sore, Jual Pagi) — peluang overnight gap
   js/claude.js     # panggilan Claude API dari browser (3 pilar)
   js/chart.js      # grafik tren rasio (SVG interaktif)
   js/idx-price.js  # ambil harga IDX real-time via CORS-proxy
