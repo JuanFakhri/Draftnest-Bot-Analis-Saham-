@@ -118,6 +118,7 @@ class Emiten:
     laporan: list[LaporanTahunan] = field(default_factory=list)
     pasar: Optional[DataPasar] = None
     harian: Optional[StatistikHarian] = None
+    backtest: Optional[dict] = None   # hitungan backtest strategi (lihat backtest.py)
 
     def laporan_terbaru(self) -> LaporanTahunan:
         if not self.laporan:

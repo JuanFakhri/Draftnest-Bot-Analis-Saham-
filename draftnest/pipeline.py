@@ -72,6 +72,7 @@ def jalankan(
 
     _tulis_index(out_dir)
     _tulis_screener(out_dir)
+    _tulis_backtest(out_dir)
     print(f"\nSelesai: {len(indeks)} sukses, {len(gagal)} gagal, {dilewati} dilewati.")
     # Sukses bila ada yang tertulis, atau semua memang sudah ada (resume).
     return 0 if (indeks or dilewati) else 1
@@ -125,6 +126,31 @@ def _tulis_screener(out_dir: Path) -> None:
     print(f"screener.json: {len(ringkasan)} emiten diringkas.")
 
 
+def _tulis_backtest(out_dir: Path) -> None:
+    """Agregasi hitungan backtest strategi dari semua file emiten -> backtest.json."""
+    from .backtest import agregasi
+
+    per: list[dict] = []
+    for f in sorted(out_dir.glob("*.json")):
+        if f.name in ("index.json", "screener.json", "backtest.json"):
+            continue
+        try:
+            d = json.loads(f.read_text(encoding="utf-8"))
+            if d.get("backtest"):
+                per.append(d["backtest"])
+        except Exception:
+            continue
+    hasil = agregasi(per)
+    (out_dir / "backtest.json").write_text(
+        json.dumps(
+            {"diperbarui": date.today().isoformat(), "emiten_diuji": len(per), "strategi": hasil},
+            ensure_ascii=False, indent=2,
+        ),
+        encoding="utf-8",
+    )
+    print(f"backtest.json: agregasi {len(per)} emiten.")
+
+
 def _refresh_fallback(kode_list: list[str]) -> None:
     """Simpan daftar universe ke data/idx_tickers.txt sebagai cache fallback."""
     if not kode_list:
@@ -153,6 +179,7 @@ def main(argv: list[str] | None = None) -> int:
         out_dir = Path(args.out)
         _tulis_index(out_dir)
         _tulis_screener(out_dir)
+        _tulis_backtest(out_dir)
         return 0
 
     if args.all:

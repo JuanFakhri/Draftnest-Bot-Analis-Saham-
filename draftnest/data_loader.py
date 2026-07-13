@@ -81,6 +81,7 @@ def muat_emiten(path: str | Path) -> Emiten:
         laporan=[_laporan(x) for x in data["laporan"]],
         pasar=_pasar(data["pasar"]) if data.get("pasar") else None,
         harian=_harian(data["harian"]) if data.get("harian") else None,
+        backtest=data.get("backtest"),
     )
 
 
