@@ -18,11 +18,14 @@ from __future__ import annotations
 
 from typing import Any, Optional
 
-# Nama strategi untuk tampilan.
+# Nama strategi untuk tampilan (termasuk gabungan).
 STRATEGI = {
     "s1": "RSI Pullback + Akumulasi (tanpa foreign flow)",
     "s2": "Momentum Breakout",
+    "s_and": "Gabungan S1 DAN S2 (harus dua-duanya)",
+    "s_or": "Gabungan S1 ATAU S2 (salah satu)",
 }
+_KEYS = ("s1", "s2", "s_and", "s_or")
 
 
 def rsi(closes: list[float], period: int = 14) -> list[Optional[float]]:
@@ -106,7 +109,7 @@ def jalankan_backtest(opens, closes, vols, shares) -> dict[str, Any]:
     hari terakhir (i = n-1) memicu strategi (kandidat entri hari ini).
     """
     n = len(closes)
-    hasil = {"s1": _kosong(), "s2": _kosong()}
+    hasil = {k: _kosong() for k in _KEYS}
     if n < 6 or shares <= 0:
         return hasil
     rsis = rsi(closes, 14)
@@ -115,17 +118,18 @@ def jalankan_backtest(opens, closes, vols, shares) -> dict[str, Any]:
     for i in range(1, n):
         s1 = _sinyal_s1(i, closes, vols, rsis, shares)
         s2 = _sinyal_s2(i, closes, vols, sma5, shares)
+        flags = {"s1": s1, "s2": s2, "s_and": s1 and s2, "s_or": s1 or s2}
         if i == n - 1:
-            hasil["s1"]["sinyal_terakhir"] = s1
-            hasil["s2"]["sinyal_terakhir"] = s2
+            for k in _KEYS:
+                hasil[k]["sinyal_terakhir"] = flags[k]
             continue  # hari terakhir tak punya i+1 untuk overnight
-        for key, ok in (("s1", s1), ("s2", s2)):
-            if not ok:
+        if closes[i] <= 0:
+            continue
+        onr = (opens[i + 1] - closes[i]) / closes[i]
+        for k in _KEYS:
+            if not flags[k]:
                 continue
-            if closes[i] <= 0:
-                continue
-            onr = (opens[i + 1] - closes[i]) / closes[i]
-            h = hasil[key]
+            h = hasil[k]
             h["sinyal"] += 1
             if onr > 0:
                 h["menang"] += 1
@@ -137,10 +141,10 @@ def jalankan_backtest(opens, closes, vols, shares) -> dict[str, Any]:
 
 def agregasi(per_emiten: list[dict[str, Any]]) -> dict[str, Any]:
     """Gabungkan hitungan backtest banyak emiten -> statistik ringkas per strategi."""
-    tot = {"s1": _kosong(), "s2": _kosong()}
-    emiten_sinyal = {"s1": 0, "s2": 0}
+    tot = {k: _kosong() for k in _KEYS}
+    emiten_sinyal = {k: 0 for k in _KEYS}
     for bt in per_emiten:
-        for k in ("s1", "s2"):
+        for k in _KEYS:
             b = bt.get(k)
             if not b:
                 continue

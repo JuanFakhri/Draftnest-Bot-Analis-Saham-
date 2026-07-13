@@ -85,6 +85,8 @@ def ringkas_emiten(emiten: Emiten) -> dict[str, Any]:
     sinyal = {
         "strat1_sinyal": bool(bt.get("s1", {}).get("sinyal_terakhir")),
         "strat2_sinyal": bool(bt.get("s2", {}).get("sinyal_terakhir")),
+        "strat_and_sinyal": bool(bt.get("s_and", {}).get("sinyal_terakhir")),
+        "strat_or_sinyal": bool(bt.get("s_or", {}).get("sinyal_terakhir")),
     }
 
     return {**bsjp, **sinyal,
