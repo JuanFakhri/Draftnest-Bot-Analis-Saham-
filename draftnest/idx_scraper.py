@@ -317,6 +317,8 @@ def emiten_ke_dict(emiten: Emiten) -> dict[str, Any]:
             "dividen_per_saham": m.dividen_per_saham,
             "dividen_beruntun": m.dividen_beruntun,
         }
+    if emiten.backtest:
+        out["backtest"] = emiten.backtest
     if emiten.harian:
         h = emiten.harian
         out["harian"] = {

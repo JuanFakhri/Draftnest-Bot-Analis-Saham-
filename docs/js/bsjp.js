@@ -1,16 +1,24 @@
-// bsjp.js — menu "Beli Sore, Jual Pagi" (overnight gap).
-// Memakai statistik overnight gap (close -> open besok) dari docs/data/screener.json.
-// Menampilkan PELUANG HISTORIS, bukan jaminan. Menahan semalam berisiko gap-down.
+// bsjp.js — menu "Beli Sore, Jual Pagi" (overnight): mode Peluang Gap + 2 strategi backtested.
+// Data: docs/data/screener.json (per emiten) & docs/data/backtest.json (agregasi backtest).
+// Menampilkan PELUANG/HASIL HISTORIS, bukan jaminan. Menahan semalam berisiko gap-down.
 
 const $ = (id) => document.getElementById(id);
 const pct = (x) => (x != null && isFinite(x) ? (x * 100).toFixed(1) + "%" : "–");
+const pct2 = (x) => (x != null && isFinite(x) ? (x * 100).toFixed(2) + "%" : "–");
 const skor = (x) => (x != null && isFinite(x) ? x.toFixed(1) : "–");
 const ribu = (x) => (x != null && isFinite(x) ? Math.round(x).toLocaleString("id-ID") : "–");
 
-let DATA = null;
+let DATA = null;       // screener.json
+let BT = null;         // backtest.json
 let onPilihEmiten = null;
 
-function kriteria() {
+const INFO_STRATEGI = {
+  s1: "RSI(14) 25–50, volume ≥2× kemarin, return hari −5%…+1%, harga ≥100, market cap ≥Rp500 M, value ≥Rp1 M. " +
+      "⚠️ Syarat asli 'Foreign Flow > 0' TIDAK tersedia dari sumber data, jadi backtest ini tanpa syarat itu.",
+  s2: "Harga naik >5% dari kemarin, harga ≥ MA5, volume <1,2× kemarin, value ≥Rp5 M.",
+};
+
+function bacaKriteriaGap() {
   const persen = (id) => { const v = parseFloat($(id).value); return isFinite(v) ? v / 100 : null; };
   return {
     peluangMin: persen("bs-peluang"),
@@ -20,7 +28,7 @@ function kriteria() {
   };
 }
 
-function lolos(r, k) {
+function lolosGap(r, k) {
   if (r.bsjp_peluang == null) return false;
   if (k.peluangMin != null && r.bsjp_peluang < k.peluangMin) return false;
   if (k.winMin != null && (r.bsjp_win_rate == null || r.bsjp_win_rate < k.winMin)) return false;
@@ -29,25 +37,60 @@ function lolos(r, k) {
   return true;
 }
 
+function kartuBacktest(s) {
+  if (!s) return "";
+  const warna = (x) => (x == null ? "" : x >= 0 ? "pos" : "neg");
+  const menarik = s.win_rate != null && s.win_rate > 0.5 && (s.rata_overnight || 0) > 0;
+  return `<div class="warnbox" style="border-left-color:var(--accent)">
+    <b>Backtest ${s.nama}</b> (histori ~6 th, seluruh IDX):
+    <div class="kv" style="margin-top:6px">
+      <div><span class="k">Total sinyal</span><span>${ribu(s.total_sinyal)}</span></div>
+      <div><span class="k">Win rate (overnight+)</span><span class="${warna(s.win_rate - 0.5)}">${pct(s.win_rate)}</span></div>
+      <div><span class="k">Rata-rata gain semalam</span><span class="${warna(s.rata_overnight)}">${pct2(s.rata_overnight)}</span></div>
+      <div><span class="k">Peluang ≥3% semalam</span><span>${pct(s.peluang_3persen)}</span></div>
+      <div><span class="k">Kandidat sinyal terakhir</span><span>${ribu(s.emiten_sinyal_terakhir)} emiten</span></div>
+    </div>
+    <p style="margin:8px 0 0">${menarik
+      ? "Secara historis strategi ini <b>rata-rata positif semalam</b> — tetap bukan jaminan."
+      : "⚠️ Secara historis strategi ini <b>rata-rata TIDAK menguntungkan</b> semalam (win rate ≤50% atau rata-rata gain negatif). Hati-hati."}</p>
+  </div>`;
+}
+
 function render() {
   if (!DATA) return;
-  const k = kriteria();
-  const ada = DATA.emiten.some((r) => r.bsjp_peluang != null);
-  if (!ada) {
-    $("bs-status").innerHTML =
-      "Data overnight-gap belum tersedia di dataset ini (butuh riwayat harga harian). " +
-      "Akan terisi setelah pembaruan data harga. Sementara ini menu belum bisa memberi hasil.";
-    $("bs-result").innerHTML = "";
-    return;
+  const mode = $("bs-strategi").value;
+  $("bs-strategi-info").textContent = mode === "gap" ? "" : (INFO_STRATEGI[mode] || "");
+  $("bs-kriteria-gap").style.display = mode === "gap" ? "" : "none";
+  $("bs-backtest").innerHTML = (mode !== "gap" && BT) ? kartuBacktest(BT.strategi[mode]) : "";
+
+  const adaGap = DATA.emiten.some((r) => r.bsjp_peluang != null);
+  if (!adaGap && mode === "gap") {
+    $("bs-status").textContent =
+      "Data overnight-gap belum tersedia (butuh riwayat harga harian). Akan terisi setelah pembaruan data.";
+    $("bs-result").innerHTML = ""; return;
   }
 
-  const hasil = DATA.emiten.filter((r) => lolos(r, k))
-    .sort((a, b) => (b.bsjp_peluang || 0) - (a.bsjp_peluang || 0));
+  let hasil, judul;
+  if (mode === "gap") {
+    const k = bacaKriteriaGap();
+    hasil = DATA.emiten.filter((r) => lolosGap(r, k))
+      .sort((a, b) => (b.bsjp_peluang || 0) - (a.bsjp_peluang || 0));
+    judul = "peluang gap ≥3% tertinggi";
+  } else {
+    const flag = mode === "s1" ? "strat1_sinyal" : "strat2_sinyal";
+    hasil = DATA.emiten.filter((r) => r[flag])
+      .sort((a, b) => (b.bsjp_peluang || 0) - (a.bsjp_peluang || 0));
+    judul = "yang memicu sinyal strategi pada data terakhir";
+  }
+
+  const adaSinyalData = mode === "gap" || DATA.emiten.some((r) => r.strat1_sinyal != null || r.strat2_sinyal != null);
+  if (!adaSinyalData) {
+    $("bs-status").textContent = "Data sinyal strategi belum tersedia — akan terisi setelah pembaruan data harga.";
+    $("bs-result").innerHTML = ""; return;
+  }
 
   $("bs-status").innerHTML =
-    `${hasil.length} saham cocok (data ${DATA.diperbarui}). Diurutkan dari peluang gap ≥3% tertinggi. ` +
-    `<b>Ingat:</b> ini frekuensi historis, bukan jaminan besok naik.`;
-
+    `${hasil.length} saham (${judul}, data ${DATA.diperbarui}). <b>Ingat:</b> ini historis, bukan jaminan besok naik.`;
   if (!hasil.length) { $("bs-result").innerHTML = ""; return; }
 
   const rows = hasil.slice(0, 100).map((r) => `
@@ -56,7 +99,7 @@ function render() {
       <td>${r.nama || ""}</td>
       <td><b class="bsjp-hero">${pct(r.bsjp_peluang)}</b></td>
       <td>${pct(r.bsjp_win_rate)}</td>
-      <td>${pct(r.bsjp_rata_gap)}</td>
+      <td>${pct2(r.bsjp_rata_gap)}</td>
       <td>${ribu(r.bsjp_volume)}</td>
       <td>${skor(r.skor_akhir)}</td>
     </tr>`).join("");
@@ -70,11 +113,9 @@ function render() {
       </tr></thead>
       <tbody>${rows}</tbody>
     </table></div>
-    <p class="hint">
-      <b>Peluang ≥3% pagi</b> = fraksi hari (±1 tahun) saat harga pembukaan ≥3% di atas penutupan sebelumnya.
-      <b>Win rate</b> = fraksi hari gap positif. <b>Rata gap</b> = rata-rata selisih tutup→buka (sering mendekati 0).
-      Klik baris untuk analisis fundamental emiten. Pertimbangkan likuiditas, spread, dan biaya transaksi —
-      dan bahwa strategi ini rentan saat sentimen pasar memburuk.</p>`;
+    <p class="hint">Klik baris untuk analisis fundamental emiten. Angka "peluang/win/rata gap" di atas
+      adalah statistik overnight umum saham tsb (bukan khusus strategi). Pertimbangkan likuiditas,
+      spread, biaya, dan risiko sentimen pasar memburuk.</p>`;
 
   for (const tr of $("bs-result").querySelectorAll(".sc-row")) {
     tr.addEventListener("click", () => onPilihEmiten && onPilihEmiten(tr.dataset.kode));
@@ -84,10 +125,12 @@ function render() {
 export async function initBSJP(onPilih) {
   onPilihEmiten = onPilih;
   $("view-bsjp").addEventListener("input", render);
+  $("bs-strategi").addEventListener("change", render);
   try {
     DATA = await (await fetch("data/screener.json", { cache: "no-cache" })).json();
-    render();
   } catch (_) {
-    $("bs-status").textContent = "Gagal memuat data (data/screener.json belum tersedia).";
+    $("bs-status").textContent = "Gagal memuat data (data/screener.json belum tersedia)."; return;
   }
+  try { BT = await (await fetch("data/backtest.json", { cache: "no-cache" })).json(); } catch (_) { BT = null; }
+  render();
 }

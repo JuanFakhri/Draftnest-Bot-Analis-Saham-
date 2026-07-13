@@ -135,11 +135,13 @@ def fetch_emiten(kode: str, tahun_maks: int = 5) -> Emiten:
     harga = info.get("currentPrice") or info.get("regularMarketPrice") or info.get("previousClose")
     saham = info.get("sharesOutstanding")
     harian: Optional[StatistikHarian] = None
+    backtest: Optional[dict] = None
     if harga and saham:
         hist = _safe(lambda: tkr.history(period="6y"))  # sekali tarik, dipakai ulang
         mean_per, mean_pbv = _mean_per_pbv(laporan, float(saham), hist, n=3)
         div_yield, div_ps, div_streak = _dividen(tkr, float(harga), info)
         harian = _bsjp_stats(hist)
+        backtest = _backtest(hist, float(saham))
         pasar = DataPasar(
             harga_saham=float(harga),
             saham_beredar=float(saham),
@@ -158,7 +160,24 @@ def fetch_emiten(kode: str, tahun_maks: int = 5) -> Emiten:
             f"tidak terdaftar, atau rate-limit."
         )
 
-    return Emiten(profil=profil, laporan=laporan, pasar=pasar, harian=harian)
+    return Emiten(profil=profil, laporan=laporan, pasar=pasar,
+                  harian=harian, backtest=backtest)
+
+
+def _backtest(hist, saham: float):
+    """Backtest 2 strategi dari riwayat harga harian. None bila data kurang."""
+    if hist is None or getattr(hist, "empty", True):
+        return None
+    if "Open" not in hist or "Close" not in hist or "Volume" not in hist:
+        return None
+    try:
+        from .backtest import jalankan_backtest
+        opens = [float(x) for x in hist["Open"].tolist()]
+        closes = [float(x) for x in hist["Close"].tolist()]
+        vols = [float(x) for x in hist["Volume"].tolist()]
+        return jalankan_backtest(opens, closes, vols, saham)
+    except Exception:
+        return None
 
 
 def _safe(fn):

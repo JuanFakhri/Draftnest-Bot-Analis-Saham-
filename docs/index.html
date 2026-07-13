@@ -208,7 +208,20 @@
         </div>
 
         <fieldset class="group">
-          <legend>Kriteria (target keuntungan pagi 3%)</legend>
+          <legend>Pilih strategi</legend>
+          <label>Strategi
+            <select id="bs-strategi">
+              <option value="gap">Peluang Gap ≥3% (default)</option>
+              <option value="s1">Strategi 1 — RSI Pullback + Akumulasi</option>
+              <option value="s2">Strategi 2 — Momentum Breakout</option>
+            </select>
+          </label>
+          <p id="bs-strategi-info" class="hint"></p>
+          <div id="bs-backtest"></div>
+        </fieldset>
+
+        <fieldset class="group" id="bs-kriteria-gap">
+          <legend>Kriteria (mode Peluang Gap, target 3%)</legend>
           <div class="grid grid-4">
             <label>Target gain (%)<input id="bs-target" type="number" step="any" value="3" disabled title="Data dihitung pada target 3%" /></label>
             <label>Peluang ≥target min (%)<input id="bs-peluang" type="number" step="any" value="30" /></label>

@@ -81,7 +81,13 @@ def ringkas_emiten(emiten: Emiten) -> dict[str, Any]:
         "bsjp_target": h.target if h else None,
     } if h else {"bsjp_peluang": None}
 
-    return {**bsjp,
+    bt = emiten.backtest or {}
+    sinyal = {
+        "strat1_sinyal": bool(bt.get("s1", {}).get("sinyal_terakhir")),
+        "strat2_sinyal": bool(bt.get("s2", {}).get("sinyal_terakhir")),
+    }
+
+    return {**bsjp, **sinyal,
         "kode": emiten.profil.kode,
         "nama": emiten.profil.nama,
         "sektor": emiten.profil.sektor,
