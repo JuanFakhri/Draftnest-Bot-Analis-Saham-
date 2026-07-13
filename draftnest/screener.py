@@ -71,7 +71,17 @@ def ringkas_emiten(emiten: Emiten) -> dict[str, Any]:
 
     prospek = _prospek_bagus(r, kuant, sp.get("kualitatif"))
 
-    return {
+    h = emiten.harian
+    bsjp = {
+        "bsjp_peluang": h.peluang_naik_target if h else None,
+        "bsjp_win_rate": h.win_rate if h else None,
+        "bsjp_rata_gap": h.rata_gap if h else None,
+        "bsjp_volume": h.volume_rata if h else None,
+        "bsjp_sampel": h.sampel_hari if h else None,
+        "bsjp_target": h.target if h else None,
+    } if h else {"bsjp_peluang": None}
+
+    return {**bsjp,
         "kode": emiten.profil.kode,
         "nama": emiten.profil.nama,
         "sektor": emiten.profil.sektor,

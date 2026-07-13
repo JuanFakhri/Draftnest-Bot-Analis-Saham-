@@ -52,6 +52,7 @@
     <nav class="tabs" role="tablist">
       <button id="tab-analisis" class="tab active" role="tab">🔍 Analisis Saham</button>
       <button id="tab-screener" class="tab" role="tab">🧭 Screener Saham</button>
+      <button id="tab-bsjp" class="tab" role="tab">🌙 BSJP</button>
       <button id="tab-avgdown" class="tab" role="tab">📉 Average Down</button>
     </nav>
 
@@ -191,6 +192,36 @@
         <div id="sc-result"></div>
       </section>
     </div><!-- /view-screener -->
+
+    <!-- ================= BSJP (Beli Sore, Jual Pagi) ================= -->
+    <div id="view-bsjp" hidden>
+      <section class="card">
+        <div class="card-head">
+          <h2>🌙 BSJP — Beli Sore, Jual Pagi</h2>
+        </div>
+        <div class="warnbox">
+          <b>⚠️ Penting — tidak ada jaminan untung.</b> Strategi ini menahan saham semalam,
+          sehingga <b>berisiko gap-down</b> (harga pagi bisa turun). Tabel di bawah adalah
+          <b>peluang historis</b>: seberapa sering tiap saham <b>naik ≥3% dari harga tutup ke pembukaan
+          besoknya</b> selama ~1 tahun terakhir — <b>bukan ramalan</b> dan bukan ajakan beli.
+          Saham dengan peluang gap tinggi biasanya <b>sangat volatil/spekulatif</b>. DYOR.
+        </div>
+
+        <fieldset class="group">
+          <legend>Kriteria (target keuntungan pagi 3%)</legend>
+          <div class="grid grid-4">
+            <label>Target gain (%)<input id="bs-target" type="number" step="any" value="3" disabled title="Data dihitung pada target 3%" /></label>
+            <label>Peluang ≥target min (%)<input id="bs-peluang" type="number" step="any" value="30" /></label>
+            <label>Win rate min (%)<input id="bs-winrate" type="number" step="any" value="50" /></label>
+            <label>Volume harian min (lembar)<input id="bs-volume" type="number" step="any" value="1000000" /></label>
+          </div>
+          <label class="inline-check"><input id="bs-hanya-fundamental" type="checkbox" /> Hanya yang fundamentalnya lumayan (skor akhir ≥ 5.5)</label>
+        </fieldset>
+
+        <p id="bs-status" class="status" role="status" aria-live="polite"></p>
+        <div id="bs-result"></div>
+      </section>
+    </div><!-- /view-bsjp -->
 
     <!-- ================= AVERAGE DOWN ================= -->
     <div id="view-avgdown" hidden>

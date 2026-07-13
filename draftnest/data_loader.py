@@ -11,7 +11,7 @@ import json
 from pathlib import Path
 from typing import Any
 
-from .models import DataPasar, Emiten, LaporanTahunan, ProfilEmiten
+from .models import DataPasar, Emiten, LaporanTahunan, ProfilEmiten, StatistikHarian
 
 
 def _profil(d: dict[str, Any]) -> ProfilEmiten:
@@ -80,4 +80,19 @@ def muat_emiten(path: str | Path) -> Emiten:
         profil=_profil(data["profil"]),
         laporan=[_laporan(x) for x in data["laporan"]],
         pasar=_pasar(data["pasar"]) if data.get("pasar") else None,
+        harian=_harian(data["harian"]) if data.get("harian") else None,
+    )
+
+
+def _harian(d: dict[str, Any]) -> StatistikHarian:
+    return StatistikHarian(
+        sampel_hari=int(d.get("sampel_hari", 0) or 0),
+        peluang_naik_target=d.get("peluang_naik_target"),
+        win_rate=d.get("win_rate"),
+        rata_gap=d.get("rata_gap"),
+        median_gap=d.get("median_gap"),
+        rata_gap_positif=d.get("rata_gap_positif"),
+        volatilitas_gap=d.get("volatilitas_gap"),
+        volume_rata=d.get("volume_rata"),
+        target=float(d.get("target", 0.03) or 0.03),
     )

@@ -317,4 +317,17 @@ def emiten_ke_dict(emiten: Emiten) -> dict[str, Any]:
             "dividen_per_saham": m.dividen_per_saham,
             "dividen_beruntun": m.dividen_beruntun,
         }
+    if emiten.harian:
+        h = emiten.harian
+        out["harian"] = {
+            "sampel_hari": h.sampel_hari,
+            "peluang_naik_target": h.peluang_naik_target,
+            "win_rate": h.win_rate,
+            "rata_gap": h.rata_gap,
+            "median_gap": h.median_gap,
+            "rata_gap_positif": h.rata_gap_positif,
+            "volatilitas_gap": h.volatilitas_gap,
+            "volume_rata": h.volume_rata,
+            "target": h.target,
+        }
     return out
