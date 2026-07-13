@@ -10,9 +10,70 @@
     "prospek_industri": "",
     "berita_terkini": ""
   },
-  "laporan": [],
+  "laporan": [
+    {
+      "tahun": 2022,
+      "total_aset": 3959240000000.0,
+      "aset_lancar": 1637418000000.0,
+      "total_liabilitas": 1252268000000.0,
+      "liabilitas_lancar": 358944000000.0,
+      "total_ekuitas": 2588122000000.0,
+      "pendapatan": 1522624000000.0,
+      "laba_kotor": 384048000000.0,
+      "laba_operasi": 83381000000.0,
+      "laba_bersih": 62503000000.0,
+      "arus_kas_operasi": 0.0,
+      "arus_kas_investasi": -560417000000.0,
+      "arus_kas_pendanaan": 796446000000.0
+    },
+    {
+      "tahun": 2023,
+      "total_aset": 4704033000000.0,
+      "aset_lancar": 1681961000000.0,
+      "total_liabilitas": 1769456000000.0,
+      "liabilitas_lancar": 469656000000.0,
+      "total_ekuitas": 2798525000000.0,
+      "pendapatan": 1839233000000.0,
+      "laba_kotor": 519455000000.0,
+      "laba_operasi": 208924000000.0,
+      "laba_bersih": 216974000000.0,
+      "arus_kas_operasi": 0.0,
+      "arus_kas_investasi": -509506000000.0,
+      "arus_kas_pendanaan": 289446000000.0
+    },
+    {
+      "tahun": 2024,
+      "total_aset": 5072590000000.0,
+      "aset_lancar": 1704992000000.0,
+      "total_liabilitas": 1938453000000.0,
+      "liabilitas_lancar": 543772000000.0,
+      "total_ekuitas": 3007262000000.0,
+      "pendapatan": 2103055000000.0,
+      "laba_kotor": 599293000000.0,
+      "laba_operasi": 243705000000.0,
+      "laba_bersih": 201443000000.0,
+      "arus_kas_operasi": 0.0,
+      "arus_kas_investasi": -591034000000.0,
+      "arus_kas_pendanaan": 150859000000.0
+    },
+    {
+      "tahun": 2025,
+      "total_aset": 6150094000000.0,
+      "aset_lancar": 1569905000000.0,
+      "total_liabilitas": 2684169000000.0,
+      "liabilitas_lancar": 954063000000.0,
+      "total_ekuitas": 3232225000000.0,
+      "pendapatan": 2436837000000.0,
+      "laba_kotor": 681170000000.0,
+      "laba_operasi": 264022000000.0,
+      "laba_bersih": 211428000000.0,
+      "arus_kas_operasi": 0.0,
+      "arus_kas_investasi": -894425000000.0,
+      "arus_kas_pendanaan": 219939000000.0
+    }
+  ],
   "pasar": {
-    "harga_saham": 685.0,
+    "harga_saham": 660.0,
     "saham_beredar": 13959422300.0,
     "per_sektor": null,
     "pbv_sektor": null,
@@ -25,5 +86,16 @@
     "dividend_yield": null,
     "dividen_per_saham": null,
     "dividen_beruntun": 0
+  },
+  "harian": {
+    "sampel_hari": 252,
+    "peluang_naik_target": 0.031746031746031744,
+    "win_rate": 0.28174603174603174,
+    "rata_gap": -0.0014135503187192927,
+    "median_gap": 0.0,
+    "rata_gap_positif": 0.01572241543535659,
+    "volatilitas_gap": 0.018762627401801485,
+    "volume_rata": 74248.22134387352,
+    "target": 0.03
   }
 }

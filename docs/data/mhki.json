@@ -58,7 +58,7 @@
     }
   ],
   "pasar": {
-    "harga_saham": 119.0,
+    "harga_saham": 140.0,
     "saham_beredar": 3750000000.0,
     "per_sektor": null,
     "pbv_sektor": null,
@@ -68,8 +68,19 @@
     "discount_rate": 0.11,
     "terminal_growth": 0.03,
     "tahun_proyeksi": 5,
-    "dividend_yield": 0.02235294117647059,
+    "dividend_yield": 0.019,
     "dividen_per_saham": 2.66,
     "dividen_beruntun": 3
+  },
+  "harian": {
+    "sampel_hari": 252,
+    "peluang_naik_target": 0.06349206349206349,
+    "win_rate": 0.6150793650793651,
+    "rata_gap": 0.006617487333239304,
+    "median_gap": 3.601334895195918e-08,
+    "rata_gap_positif": 0.013586348571719253,
+    "volatilitas_gap": 0.016936186257389883,
+    "volume_rata": 34834090.51383399,
+    "target": 0.03
   }
 }
