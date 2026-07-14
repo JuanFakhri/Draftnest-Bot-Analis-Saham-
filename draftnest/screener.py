@@ -88,6 +88,14 @@ def ringkas_emiten(emiten: Emiten) -> dict[str, Any]:
         "strat_and_sinyal": bool(bt.get("s_and", {}).get("sinyal_terakhir")),
         "strat_or_sinyal": bool(bt.get("s_or", {}).get("sinyal_terakhir")),
     }
+    # Hitungan backtest per-saham (agar win rate bisa dihitung ulang untuk subset
+    # yang difilter di browser, mis. S2 + skor fundamental / likuiditas).
+    for key in ("s1", "s2", "s_or"):
+        b = bt.get(key) or {}
+        sinyal[f"bt_{key}_sinyal"] = b.get("sinyal", 0)
+        sinyal[f"bt_{key}_menang"] = b.get("menang", 0)
+        sinyal[f"bt_{key}_hit3"] = b.get("hit3", 0)
+        sinyal[f"bt_{key}_ret"] = round(b.get("ret_total", 0.0), 6)
 
     return {**bsjp, **sinyal,
         "kode": emiten.profil.kode,

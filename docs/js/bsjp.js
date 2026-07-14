@@ -41,37 +41,87 @@ function lolosGap(r, k) {
   return true;
 }
 
-function kartuBacktest(s) {
-  if (!s) return "";
+// Aggregasi ulang win rate dari hitungan per-saham (subset yang difilter).
+function agregasiSubset(emiten, key) {
+  let sinyal = 0, menang = 0, hit3 = 0, ret = 0;
+  for (const e of emiten) {
+    sinyal += e[`bt_${key}_sinyal`] || 0;
+    menang += e[`bt_${key}_menang`] || 0;
+    hit3 += e[`bt_${key}_hit3`] || 0;
+    ret += e[`bt_${key}_ret`] || 0;
+  }
+  return {
+    total_sinyal: sinyal,
+    win_rate: sinyal ? menang / sinyal : null,
+    peluang_3persen: sinyal ? hit3 / sinyal : null,
+    rata_overnight: sinyal ? ret / sinyal : null,
+  };
+}
+
+function kartuBacktest(nama, pool, subset, adaFilter) {
   const warna = (x) => (x == null ? "" : x >= 0 ? "pos" : "neg");
+  const s = adaFilter ? subset : pool;
   const menarik = s.win_rate != null && s.win_rate > 0.5 && (s.rata_overnight || 0) > 0;
+  const bandingan = adaFilter
+    ? `<p class="hint" style="margin:6px 0 0">Tanpa filter (semua IDX): win rate ${pct(pool.win_rate)}, rata ${pct2(pool.rata_overnight)}, ${ribu(pool.total_sinyal)} sinyal.</p>`
+    : "";
   return `<div class="warnbox" style="border-left-color:var(--accent)">
-    <b>Backtest ${s.nama}</b> (histori ~6 th, seluruh IDX):
+    <b>Backtest ${nama}</b> (histori ~6 th${adaFilter ? ", <u>subset terfilter</u>" : ", seluruh IDX"}):
     <div class="kv" style="margin-top:6px">
       <div><span class="k">Total sinyal</span><span>${ribu(s.total_sinyal)}</span></div>
       <div><span class="k">Win rate (overnight+)</span><span class="${warna(s.win_rate - 0.5)}">${pct(s.win_rate)}</span></div>
       <div><span class="k">Rata-rata gain semalam</span><span class="${warna(s.rata_overnight)}">${pct2(s.rata_overnight)}</span></div>
       <div><span class="k">Peluang ≥3% semalam</span><span>${pct(s.peluang_3persen)}</span></div>
-      <div><span class="k">Kandidat sinyal terakhir</span><span>${ribu(s.emiten_sinyal_terakhir)} emiten</span></div>
     </div>
     <p style="margin:8px 0 0">${menarik
-      ? "Secara historis strategi ini <b>rata-rata positif semalam</b> — tetap bukan jaminan."
-      : "⚠️ Secara historis strategi ini <b>rata-rata TIDAK menguntungkan</b> semalam (win rate ≤50% atau rata-rata gain negatif). Hati-hati."}</p>
+      ? "Secara historis <b>rata-rata positif semalam</b> — tetap bukan jaminan; angka ini KOTOR (belum fee/spread/pajak)."
+      : "⚠️ Secara historis <b>rata-rata TIDAK menguntungkan</b> semalam (win rate ≤50% atau rata gain negatif). Hati-hati."}</p>
+    ${bandingan}
   </div>`;
 }
 
 function render() {
   if (!DATA) return;
   const mode = $("bs-strategi").value;
-  $("bs-strategi-info").textContent = mode === "gap" ? "" : (INFO_STRATEGI[mode] || "");
-  $("bs-kriteria-gap").style.display = mode === "gap" ? "" : "none";
-  $("bs-backtest").innerHTML = (mode !== "gap" && BT) ? kartuBacktest(BT.strategi[mode]) : "";
+  const strategiMode = mode !== "gap";
+  $("bs-strategi-info").textContent = strategiMode ? (INFO_STRATEGI[mode] || "") : "";
+  $("bs-kriteria-gap").style.display = strategiMode ? "none" : "";
+  // Filter subset hanya untuk mode strategi yang punya hitungan per-saham (s1/s2/s_or).
+  const bisaSubset = strategiMode && mode !== "s_and";
+  $("bs-filter-subset").hidden = !bisaSubset;
 
   const adaGap = DATA.emiten.some((r) => r.bsjp_peluang != null);
   if (!adaGap && mode === "gap") {
     $("bs-status").textContent =
       "Data overnight-gap belum tersedia (butuh riwayat harga harian). Akan terisi setelah pembaruan data.";
-    $("bs-result").innerHTML = ""; return;
+    $("bs-result").innerHTML = ""; $("bs-backtest").innerHTML = ""; return;
+  }
+
+  // Subset filter values.
+  const skorMin = parseFloat($("bs-skor-min").value);
+  const volMin = parseFloat($("bs-vol-subset").value);
+  const sektor = ($("bs-sektor").value || "").trim().toLowerCase();
+  const adaFilter = bisaSubset && (isFinite(skorMin) || isFinite(volMin) || !!sektor);
+  const lolosSubset = (r) => {
+    if (isFinite(skorMin) && (r.skor_akhir == null || r.skor_akhir < skorMin)) return false;
+    if (isFinite(volMin) && (r.bsjp_volume == null || r.bsjp_volume < volMin)) return false;
+    if (sektor && !(r.sektor || "").toLowerCase().includes(sektor)) return false;
+    return true;
+  };
+
+  // Kartu backtest: live-recompute untuk subset.
+  if (strategiMode) {
+    const key = mode === "s_and" ? null : mode;
+    if (mode === "s_and") {
+      $("bs-backtest").innerHTML = BT ? kartuBacktest(BT.strategi.s_and.nama, BT.strategi.s_and, BT.strategi.s_and, false) : "";
+    } else {
+      const pool = agregasiSubset(DATA.emiten, key);
+      const subset = agregasiSubset(DATA.emiten.filter(lolosSubset), key);
+      const nama = (BT && BT.strategi[mode] && BT.strategi[mode].nama) || mode;
+      $("bs-backtest").innerHTML = kartuBacktest(nama, pool, subset, adaFilter);
+    }
+  } else {
+    $("bs-backtest").innerHTML = "";
   }
 
   let hasil, judul;
@@ -82,9 +132,9 @@ function render() {
     judul = "peluang gap ≥3% tertinggi";
   } else {
     const flag = FLAG_STRATEGI[mode];
-    hasil = DATA.emiten.filter((r) => r[flag])
+    hasil = DATA.emiten.filter((r) => r[flag] && (!adaFilter || lolosSubset(r)))
       .sort((a, b) => (b.bsjp_peluang || 0) - (a.bsjp_peluang || 0));
-    judul = "yang memicu sinyal strategi pada data terakhir";
+    judul = "yang memicu sinyal strategi pada data terakhir" + (adaFilter ? " (terfilter)" : "");
   }
 
   const adaSinyalData = mode === "gap" || DATA.emiten.some((r) => r[FLAG_STRATEGI[mode]] != null);
