@@ -1,12 +1,13 @@
 name: Refresh Sinyal BSJP (harian)
 
-# Perbarui harga + sinyal BSJP (RSI/momentum/gap) tiap hari bursa setelah tutup,
+# Perbarui harga + sinyal BSJP (RSI/momentum/gap) tiap hari bursa menjelang tutup,
 # tanpa menarik ulang laporan keuangan (ringan). Commit ke main -> situs auto-deploy.
-# IDX tutup 16:00 WIB (09:00 UTC); jalan 09:30 UTC, Sen-Jum.
+# Jalan 15:20 WIB (08:20 UTC), Sen-Jum — ~40 menit sebelum bursa tutup, pas untuk
+# "beli sore". Catatan: pada jam ini candle harian belum final, jadi sinyal = snapshot.
 
 on:
   schedule:
-    - cron: "30 9 * * 1-5"
+    - cron: "20 8 * * 1-5"
   workflow_dispatch:
 
 permissions:
