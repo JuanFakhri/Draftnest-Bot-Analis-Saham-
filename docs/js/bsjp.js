@@ -2,6 +2,8 @@
 // Data: docs/data/screener.json (per emiten) & docs/data/backtest.json (agregasi backtest).
 // Menampilkan PELUANG/HASIL HISTORIS, bukan jaminan. Menahan semalam berisiko gap-down.
 
+import { cekSinyalLive } from "./signals.js";
+
 const $ = (id) => document.getElementById(id);
 const pct = (x) => (x != null && isFinite(x) ? (x * 100).toFixed(1) + "%" : "–");
 const pct2 = (x) => (x != null && isFinite(x) ? (x * 100).toFixed(2) + "%" : "–");
@@ -176,10 +178,36 @@ function render() {
   }
 }
 
+async function cekLive() {
+  const kode = ($("bs-live-kode").value || "").trim().toUpperCase();
+  const out = $("bs-live-out");
+  const btn = $("bs-live-btn");
+  if (!kode) { out.textContent = "Isi kode emiten dulu."; return; }
+  const row = DATA?.emiten?.find((e) => e.kode === kode);
+  const shares = row?.saham || null;
+  btn.disabled = true; out.textContent = `Mengambil harga live ${kode}…`;
+  try {
+    const r = await cekSinyalLive(kode, shares);
+    const tag = (ok) => ok ? '<b class="pos">✅ SINYAL</b>' : '<span class="neg">tidak</span>';
+    out.innerHTML =
+      `<b>${r.kode}</b> per ${r.tanggal} · harga ${rp(r.harga)} · RSI ${r.rsi != null ? r.rsi.toFixed(0) : "–"} · ` +
+      `return hari ${pct2(r.ret)} · value ${ribu(r.value)}<br>` +
+      `Strategi 1 (RSI Pullback): ${tag(r.s1)}${r.mcapDilewati ? " <span class='hint'>(syarat market-cap dilewati: saham beredar tak diketahui)</span>" : ""} · ` +
+      `Strategi 2 (Momentum): ${tag(r.s2)}<br>` +
+      `<span class="hint">⚠️ Bar hari ini bisa <b>belum final</b> sampai bursa tutup (16:00 WIB). Sinyal bisa berubah. Bukan ajakan beli.</span>`;
+  } catch (e) {
+    out.innerHTML = `⚠️ Gagal ambil harga live (${e.message}). Proxy publik kadang diblokir — coba lagi, ` +
+      `atau lihat sinyal harian yang di-refresh otomatis di tabel.`;
+  } finally {
+    btn.disabled = false;
+  }
+}
+
 export async function initBSJP(onPilih) {
   onPilihEmiten = onPilih;
   $("view-bsjp").addEventListener("input", render);
   $("bs-strategi").addEventListener("change", render);
+  $("bs-live-btn").addEventListener("click", cekLive);
   try {
     DATA = await (await fetch("data/screener.json", { cache: "no-cache" })).json();
   } catch (_) {

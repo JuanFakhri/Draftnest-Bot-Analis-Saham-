@@ -164,6 +164,33 @@ def fetch_emiten(kode: str, tahun_maks: int = 5) -> Emiten:
                   harian=harian, backtest=backtest)
 
 
+def fetch_sinyal(kode: str, saham: float) -> Optional[dict]:
+    """Ambil HANYA riwayat harga harian lalu hitung ulang sinyal & statistik.
+
+    Jauh lebih ringan dari `fetch_emiten` (tak menarik laporan keuangan/info),
+    dipakai untuk refresh sinyal BSJP harian. `saham` diambil dari data lama.
+    Kembalikan {"harga", "harian"(dict), "backtest"(dict)} atau None bila gagal.
+    """
+    import yfinance as yf
+    from dataclasses import asdict
+
+    tkr = yf.Ticker(f"{kode.upper()}.JK")
+    hist = _safe(lambda: tkr.history(period="6y"))
+    if hist is None or getattr(hist, "empty", True) or "Close" not in hist or not len(hist):
+        return None
+    try:
+        harga = float(hist["Close"].iloc[-1])
+    except Exception:
+        harga = None
+    harian = _bsjp_stats(hist)
+    backtest = _backtest(hist, saham) if saham else None
+    return {
+        "harga": harga,
+        "harian": asdict(harian) if harian else None,
+        "backtest": backtest,
+    }
+
+
 def _backtest(hist, saham: float):
     """Backtest 2 strategi dari riwayat harga harian. None bila data kurang."""
     if hist is None or getattr(hist, "empty", True):

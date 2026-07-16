@@ -126,6 +126,49 @@ def _tulis_screener(out_dir: Path) -> None:
     print(f"screener.json: {len(ringkasan)} emiten diringkas.")
 
 
+def jalankan_sinyal(out_dir: Path, delay: float = 0.3) -> int:
+    """Refresh RINGAN: perbarui harga + sinyal BSJP (harian & backtest) tiap emiten
+    dari riwayat harga harian, tanpa menarik ulang laporan keuangan. Untuk cron
+    harian agar sinyal BSJP selalu terkini."""
+    from .yahoo_fetch import fetch_sinyal
+
+    files = [f for f in sorted(out_dir.glob("*.json"))
+             if f.name not in ("index.json", "screener.json", "backtest.json")]
+    ok = gagal = 0
+    for f in files:
+        try:
+            d = json.loads(f.read_text(encoding="utf-8"))
+            pasar = d.get("pasar") or {}
+            saham = pasar.get("saham_beredar")
+            kode = (d.get("profil") or {}).get("kode")
+            if not (saham and kode):
+                continue
+            r = fetch_sinyal(kode, float(saham))
+            if not r:
+                gagal += 1
+                continue
+            if r.get("harga"):
+                d.setdefault("pasar", {})["harga_saham"] = r["harga"]
+            if r.get("harian"):
+                d["harian"] = r["harian"]
+            if r.get("backtest"):
+                d["backtest"] = r["backtest"]
+            f.write_text(json.dumps(d, ensure_ascii=False, indent=2), encoding="utf-8")
+            ok += 1
+            print(f"[{ok}/{len(files)}] [ok] {kode}")
+        except Exception as e:
+            gagal += 1
+            print(f"[gagal] {f.name}: {e}")
+        if delay:
+            time.sleep(delay)
+
+    _tulis_index(out_dir)
+    _tulis_screener(out_dir)
+    _tulis_backtest(out_dir)
+    print(f"\nSinyal diperbarui: {ok} sukses, {gagal} gagal.")
+    return 0 if ok else 1
+
+
 def _tulis_backtest(out_dir: Path) -> None:
     """Agregasi hitungan backtest strategi dari semua file emiten -> backtest.json."""
     from .backtest import agregasi
@@ -170,6 +213,8 @@ def main(argv: list[str] | None = None) -> int:
     ap.add_argument("--list-only", action="store_true", help="Hanya cetak jumlah universe, tanpa fetch.")
     ap.add_argument("--screener-only", action="store_true",
                     help="Regenerasi index.json & screener.json dari file yang ada, tanpa fetch.")
+    ap.add_argument("--signals-only", action="store_true",
+                    help="Refresh ringan harga + sinyal BSJP harian (tanpa tarik laporan keuangan).")
     ap.add_argument("--limit", type=int, default=0, help="Batasi jumlah kode (untuk uji).")
     ap.add_argument("--delay", type=float, default=0.4, help="Jeda antar-permintaan (detik).")
     ap.add_argument("--out", default=str(OUT_DIR), help="Direktori output JSON.")
@@ -181,6 +226,9 @@ def main(argv: list[str] | None = None) -> int:
         _tulis_screener(out_dir)
         _tulis_backtest(out_dir)
         return 0
+
+    if args.signals_only:
+        return jalankan_sinyal(Path(args.out), delay=args.delay)
 
     if args.all:
         kode_list = daftar_emiten()

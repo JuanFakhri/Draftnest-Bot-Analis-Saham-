@@ -238,6 +238,17 @@
           <label class="inline-check"><input id="bs-hanya-fundamental" type="checkbox" /> Hanya yang fundamentalnya lumayan (skor akhir ≥ 5.5)</label>
         </fieldset>
 
+        <fieldset class="group">
+          <legend>Cek Sinyal LIVE (realtime, per emiten)</legend>
+          <p class="hint">Ambil harga harian terkini dari Yahoo (best-effort via proxy) dan hitung sinyal S1/S2
+            untuk bar hari ini <b>sekarang juga</b> — berguna saat mau "beli sore".</p>
+          <div class="autofetch">
+            <input id="bs-live-kode" type="text" list="kode-list" placeholder="Kode emiten, mis. RAJA" />
+            <button id="bs-live-btn" class="btn btn-primary" type="button">🔴 Cek Sinyal Live</button>
+          </div>
+          <p id="bs-live-out" class="hint" role="status" aria-live="polite"></p>
+        </fieldset>
+
         <p id="bs-status" class="status" role="status" aria-live="polite"></p>
         <div id="bs-result"></div>
       </section>

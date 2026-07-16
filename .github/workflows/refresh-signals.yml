@@ -1,0 +1,48 @@
+name: Refresh Sinyal BSJP (harian)
+
+# Perbarui harga + sinyal BSJP (RSI/momentum/gap) tiap hari bursa setelah tutup,
+# tanpa menarik ulang laporan keuangan (ringan). Commit ke main -> situs auto-deploy.
+# IDX tutup 16:00 WIB (09:00 UTC); jalan 09:30 UTC, Sen-Jum.
+
+on:
+  schedule:
+    - cron: "30 9 * * 1-5"
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+concurrency:
+  group: update-data          # berbagi grup dgn update-data.yml agar tak bentrok
+  cancel-in-progress: false
+
+jobs:
+  sinyal:
+    runs-on: ubuntu-latest
+    timeout-minutes: 60
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - name: Install dependensi data
+        run: pip install -r requirements-data.txt
+      - name: Refresh sinyal BSJP
+        run: python -m draftnest.pipeline --signals-only --delay 0.3
+      - name: Commit perubahan
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+          if [ -n "$(git status --porcelain docs/data)" ]; then
+            git add docs/data
+            git commit -m "data: refresh sinyal BSJP harian (otomatis)"
+            for i in 1 2 3 4 5; do
+              git pull --rebase --autostash origin "${GITHUB_REF_NAME}" || true
+              if git push origin "HEAD:${GITHUB_REF_NAME}"; then
+                echo "Push berhasil percobaan $i."; break
+              fi
+              echo "Push ditolak, coba lagi ($i)…"; sleep 5
+            done
+          else
+            echo "Tidak ada perubahan sinyal."
+          fi

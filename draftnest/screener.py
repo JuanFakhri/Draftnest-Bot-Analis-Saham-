@@ -102,6 +102,7 @@ def ringkas_emiten(emiten: Emiten) -> dict[str, Any]:
         "nama": emiten.profil.nama,
         "sektor": emiten.profil.sektor,
         "harga": m.harga_saham if m else None,
+        "saham": m.saham_beredar if m else None,
         "tahun": [l.tahun for l in lap],
         "naik_pendapatan": naik_pend,
         "naik_laba": naik_laba,
