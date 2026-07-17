@@ -591,7 +591,7 @@ $("btn-print").addEventListener("click", () => window.print());
 // ---------- Datalist emiten pra-ambil ----------
 async function initDatalist() {
   try {
-    const idx = await (await fetch("data/index.json", { cache: "no-cache" })).json();
+    const idx = await (await fetch(`data/index.json?t=${Date.now()}`, { cache: "no-store" })).json();
     const dl = $("kode-list");
     dl.innerHTML = (idx.emiten || [])
       .map((e) => `<option value="${e.kode}">${e.nama}</option>`).join("");

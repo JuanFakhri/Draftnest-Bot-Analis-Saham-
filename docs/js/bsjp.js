@@ -146,7 +146,10 @@ function render() {
   }
 
   $("bs-status").innerHTML =
-    `${hasil.length} saham (${judul}, data ${DATA.diperbarui}). <b>Ingat:</b> ini historis, bukan jaminan besok naik.`;
+    `📅 <b>Sinyal per ${DATA.diperbarui}</b> · diperbarui otomatis tiap hari kerja 15:20 WIB. ` +
+    `${hasil.length} saham (${judul}). ` +
+    `<span class="hint">Sinyal momentum memang jarang (biasanya cuma 2–4 saham) & bisa sama beberapa hari — itu normal. ` +
+    `Untuk angka paling mutakhir sebelum beli, pakai "Cek Sinyal Live". Historis, bukan jaminan.</span>`;
   if (!hasil.length) { $("bs-result").innerHTML = ""; return; }
 
   const rows = hasil.slice(0, 100).map((r) => `
@@ -209,10 +212,10 @@ export async function initBSJP(onPilih) {
   $("bs-strategi").addEventListener("change", render);
   $("bs-live-btn").addEventListener("click", cekLive);
   try {
-    DATA = await (await fetch("data/screener.json", { cache: "no-cache" })).json();
+    DATA = await (await fetch(`data/screener.json?t=${Date.now()}`, { cache: "no-store" })).json();
   } catch (_) {
     $("bs-status").textContent = "Gagal memuat data (data/screener.json belum tersedia)."; return;
   }
-  try { BT = await (await fetch("data/backtest.json", { cache: "no-cache" })).json(); } catch (_) { BT = null; }
+  try { BT = await (await fetch(`data/backtest.json?t=${Date.now()}`, { cache: "no-store" })).json(); } catch (_) { BT = null; }
   render();
 }
