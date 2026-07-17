@@ -95,7 +95,7 @@ export async function initScreener(onPilih) {
   onPilihEmiten = onPilih;
   $("view-screener").addEventListener("input", render);
   try {
-    DATA = await (await fetch("data/screener.json", { cache: "no-cache" })).json();
+    DATA = await (await fetch(`data/screener.json?t=${Date.now()}`, { cache: "no-store" })).json();
     render();
   } catch (_) {
     $("sc-status").textContent = "Gagal memuat data screener (data/screener.json belum tersedia).";

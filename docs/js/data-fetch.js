@@ -10,7 +10,7 @@ const FMP = "https://financialmodelingprep.com/api/v3";
 /** Coba muat data pra-ambil dari repo. Kembalikan objek emiten atau null. */
 export async function muatPraAmbil(kode) {
   try {
-    const resp = await fetch(`data/${kode.toLowerCase()}.json`, { cache: "no-cache" });
+    const resp = await fetch(`data/${kode.toLowerCase()}.json?t=${Date.now()}`, { cache: "no-store" });
     if (!resp.ok) return null;
     return await resp.json();
   } catch (_) {

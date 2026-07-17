@@ -22,7 +22,10 @@ jobs:
     runs-on: ubuntu-latest
     timeout-minutes: 60
     steps:
+      # Selalu operasikan pada `main` (situs deploy dari main) — apa pun ref pemicu.
       - uses: actions/checkout@v4
+        with:
+          ref: main
       - uses: actions/setup-python@v5
         with:
           python-version: "3.12"
@@ -30,7 +33,7 @@ jobs:
         run: pip install -r requirements-data.txt
       - name: Refresh sinyal BSJP
         run: python -m draftnest.pipeline --signals-only --delay 0.3
-      - name: Commit perubahan
+      - name: Commit perubahan ke main
         run: |
           git config user.name "github-actions[bot]"
           git config user.email "github-actions[bot]@users.noreply.github.com"
@@ -38,8 +41,8 @@ jobs:
             git add docs/data
             git commit -m "data: refresh sinyal BSJP harian (otomatis)"
             for i in 1 2 3 4 5; do
-              git pull --rebase --autostash origin "${GITHUB_REF_NAME}" || true
-              if git push origin "HEAD:${GITHUB_REF_NAME}"; then
+              git pull --rebase --autostash origin main || true
+              if git push origin HEAD:main; then
                 echo "Push berhasil percobaan $i."; break
               fi
               echo "Push ditolak, coba lagi ($i)…"; sleep 5
