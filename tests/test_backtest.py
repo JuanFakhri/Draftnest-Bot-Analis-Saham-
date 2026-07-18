@@ -63,5 +63,17 @@ class TestAgregasi(unittest.TestCase):
         self.assertEqual(agg["s2"]["emiten_sinyal_terakhir"], 1)
 
 
+class TestCircuitBreaker(unittest.TestCase):
+    def test_sinyal_masuk_akal(self):
+        from draftnest.pipeline import sinyal_masuk_akal
+        # Normal: sedikit sinyal -> sahih
+        self.assertTrue(sinyal_masuk_akal(2, 950))
+        self.assertTrue(sinyal_masuk_akal(30, 950))
+        # Rusak: ratusan sinyal -> ditolak
+        self.assertFalse(sinyal_masuk_akal(350, 950))
+        # Universe kosong -> ditolak
+        self.assertFalse(sinyal_masuk_akal(0, 0))
+
+
 if __name__ == "__main__":
     unittest.main()
