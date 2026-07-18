@@ -126,15 +126,33 @@ def _tulis_screener(out_dir: Path) -> None:
     print(f"screener.json: {len(ringkasan)} emiten diringkas.")
 
 
+def sinyal_masuk_akal(strat2_sinyal: int, total: int) -> bool:
+    """Circuit-breaker: sinyal momentum harusnya JARANG (biasanya <20 emiten).
+
+    Bila di luar jam bursa / snapshot rusak, bar harga harian terakhir bisa tak
+    valid dan memicu ratusan sinyal palsu. Bila jumlah sinyal S2 melebihi ~8%
+    universe (atau >80), anggap snapshot tak sahih dan JANGAN timpa data bagus.
+    """
+    if total <= 0:
+        return False
+    return strat2_sinyal <= max(80, int(0.08 * total))
+
+
 def jalankan_sinyal(out_dir: Path, delay: float = 0.3) -> int:
     """Refresh RINGAN: perbarui harga + sinyal BSJP (harian & backtest) tiap emiten
     dari riwayat harga harian, tanpa menarik ulang laporan keuangan. Untuk cron
-    harian agar sinyal BSJP selalu terkini."""
+    harian agar sinyal BSJP selalu terkini.
+
+    Dua tahap: kumpulkan hasil di memori dulu, cek kewajaran (circuit-breaker),
+    baru tulis. Bila snapshot rusak (mis. dijalankan di luar jam bursa), data
+    lama TIDAK ditimpa."""
     from .yahoo_fetch import fetch_sinyal
 
     files = [f for f in sorted(out_dir.glob("*.json"))
              if f.name not in ("index.json", "screener.json", "backtest.json")]
-    ok = gagal = 0
+    hasil: list[tuple] = []  # (file, dict_terupdate)
+    gagal = 0
+    strat2 = 0
     for f in files:
         try:
             d = json.loads(f.read_text(encoding="utf-8"))
@@ -153,20 +171,32 @@ def jalankan_sinyal(out_dir: Path, delay: float = 0.3) -> int:
                 d["harian"] = r["harian"]
             if r.get("backtest"):
                 d["backtest"] = r["backtest"]
-            f.write_text(json.dumps(d, ensure_ascii=False, indent=2), encoding="utf-8")
-            ok += 1
-            print(f"[{ok}/{len(files)}] [ok] {kode}")
+                if r["backtest"].get("s2", {}).get("sinyal_terakhir"):
+                    strat2 += 1
+            hasil.append((f, d))
+            print(f"[{len(hasil)}/{len(files)}] [ok] {kode}")
         except Exception as e:
             gagal += 1
             print(f"[gagal] {f.name}: {e}")
         if delay:
             time.sleep(delay)
 
+    if not hasil:
+        print("Tidak ada data yang berhasil diambil — data lama dipertahankan.")
+        return 1
+    if not sinyal_masuk_akal(strat2, len(hasil)):
+        print(f"⚠️ Snapshot MENCURIGAKAN: {strat2} sinyal S2 dari {len(hasil)} emiten "
+              f"(kemungkinan dijalankan di luar jam bursa / data rusak). "
+              f"Batal — data lama dipertahankan.")
+        return 1
+
+    for f, d in hasil:
+        f.write_text(json.dumps(d, ensure_ascii=False, indent=2), encoding="utf-8")
     _tulis_index(out_dir)
     _tulis_screener(out_dir)
     _tulis_backtest(out_dir)
-    print(f"\nSinyal diperbarui: {ok} sukses, {gagal} gagal.")
-    return 0 if ok else 1
+    print(f"\nSinyal diperbarui: {len(hasil)} sukses, {gagal} gagal, {strat2} sinyal S2.")
+    return 0
 
 
 def _tulis_backtest(out_dir: Path) -> None:
