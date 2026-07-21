@@ -188,25 +188,27 @@ def pesan_dividen(emiten: list[dict], n: int = 12) -> str:
 
 
 def pesan_bsjp(emiten: list[dict], backtest: dict, strategi: str = "s2") -> str:
-    """Sinyal BSJP + ringkasan win rate backtest."""
-    nama_str = {"s1": "Strategi 1 (RSI Pullback)", "s2": "Strategi 2 (Momentum Breakout)"}
-    flag = {"s1": "strat1_sinyal", "s2": "strat2_sinyal"}[strategi]
-    bt = (backtest or {}).get("strategi", {}).get(strategi, {})
+    """Sinyal BSJP Strategi Momentum (S2) + ringkasan win rate backtest.
 
-    L = [f"🌙 <b>BSJP — {nama_str[strategi]}</b>"]
+    S1 (RSI Pullback) dihapus dari menu: uji A/B membuktikan win rate ~50% &
+    rugi setelah biaya. Menu fokus ke S2 yang terbukti punya edge.
+    """
+    bt = (backtest or {}).get("strategi", {}).get("s2", {})
+
+    L = ["🌙 <b>BSJP — Strategi Momentum Breakout</b>"]
     if bt:
         L.append(
             f"Backtest ~6th: win rate <b>{_pct(bt.get('win_rate'))}</b>, "
             f"rata gain semalam {_pct(bt.get('rata_overnight'))}, "
             f"peluang ≥3% {_pct(bt.get('peluang_3persen'))}."
         )
-    kand = [e for e in emiten if e.get(flag)]
+    kand = [e for e in emiten if e.get("strat2_sinyal")]
     kand = sorted(kand, key=lambda e: (e.get("bsjp_peluang") or 0), reverse=True)
     L.append("")
     if kand:
         L.append(f"Kandidat sinyal terakhir ({len(kand)}):")
         for e in kand[:15]:
-            L.append(f"• <code>{_esc(e['kode'])}</code> {_esc((e.get('nama') or '')[:22])}")
+            L.append(_baris_sinyal(e))
     else:
         L.append("Tidak ada kandidat pada data terakhir (sinyal memang jarang).")
     L.append("\n⚠️ <i>Menahan semalam berisiko gap-down. Historis, bukan jaminan.</i>")
@@ -334,14 +336,10 @@ def ringkasan_scan() -> str:
                 f"rata gain semalam {_pct(v.get('rata_overnight'))}</i>")
 
     s2 = [e for e in em if e.get("strat2_sinyal")]
-    s1 = [e for e in em if e.get("strat1_sinyal")]
     s2 = sorted(s2, key=lambda e: (e.get("bsjp_peluang") or 0), reverse=True)
-    L = [f"🌙 <b>Scan BSJP</b> (data {diperbarui}):", ""]
+    L = [f"🌙 <b>Scan BSJP — Momentum</b> (data {diperbarui}):"]
     L.append(f"<b>Strategi 2 — Momentum</b> ({len(s2)} sinyal){_wr('s2')}")
     L += [_baris_sinyal(e) for e in s2[:15]] or ["  (tidak ada)"]
-    L.append("")
-    L.append(f"<b>Strategi 1 — RSI Pullback</b> ({len(s1)} sinyal){_wr('s1')}")
-    L += [_baris_sinyal(e) for e in s1[:15]] or ["  (tidak ada)"]
     L.append(f"\n<i>TP jual pagi (09.00–09.15) +{BSJP_TP*100:.1f}%, "
              f"SL disiplin −{BSJP_SL*100:.1f}%. Entry = harga sore (~15.50).</i>")
     L.append("⚠️ <i>Win rate = historis backtest ~6th, bukan jaminan. Risiko gap-down.</i>")
@@ -428,8 +426,7 @@ def tangani_pesan(teks: str) -> str:
     if perintah in ("dividen", "dividend"):
         return pesan_dividen(muat_screener())
     if perintah in ("bsjp",):
-        strat = "s1" if arg.lower() in ("s1", "1", "rsi") else "s2"
-        return pesan_bsjp(muat_screener(), muat_backtest(), strat)
+        return pesan_bsjp(muat_screener(), muat_backtest())
     if perintah in ("cari", "search"):
         return pesan_cari(muat_index(), arg)
     if perintah in ("analisis", "analisa", "analyze"):
