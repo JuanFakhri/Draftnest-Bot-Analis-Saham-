@@ -78,6 +78,19 @@ class TestPelangganScan(unittest.TestCase):
         self.assertIn("Momentum", teks)
 
 
+class TestGitSync(unittest.TestCase):
+    def test_bukan_repo_git(self):
+        import tempfile
+        from pathlib import Path
+        with tempfile.TemporaryDirectory() as d:
+            ok, msg = tb.git_sync(Path(d))   # folder kosong, tanpa .git
+            self.assertFalse(ok)
+            self.assertIn("git", msg.lower())
+
+    def test_update_ada_di_daftar(self):
+        self.assertIn("/update", tb._daftar_perintah())
+
+
 class TestDispatch(unittest.TestCase):
     def test_routing_tanpa_disk(self):
         self.assertIn("Draftnest", tb.tangani_pesan("/start"))
