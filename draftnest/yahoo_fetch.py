@@ -202,7 +202,9 @@ def _backtest(hist, saham: float):
         opens = [float(x) for x in hist["Open"].tolist()]
         closes = [float(x) for x in hist["Close"].tolist()]
         vols = [float(x) for x in hist["Volume"].tolist()]
-        return jalankan_backtest(opens, closes, vols, saham)
+        highs = [float(x) for x in hist["High"].tolist()] if "High" in hist else None
+        lows = [float(x) for x in hist["Low"].tolist()] if "Low" in hist else None
+        return jalankan_backtest(opens, closes, vols, saham, highs=highs, lows=lows)
     except Exception:
         return None
 

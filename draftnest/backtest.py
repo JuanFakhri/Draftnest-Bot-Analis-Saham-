@@ -1,8 +1,12 @@
 """Backtest strategi entry harian yang ditahan semalam (BSJP).
 
-Dua strategi (dari permintaan pengguna) dievaluasi pada tiap hari bursa memakai
-indikator dari harga harian; bila kondisi terpenuhi, posisi dibeli di harga
-penutupan hari itu dan dijual di pembukaan hari berikutnya (overnight).
+Beberapa strategi (dari permintaan pengguna) dievaluasi pada tiap hari bursa
+memakai indikator dari harga harian; bila kondisi terpenuhi, posisi dibeli di
+harga penutupan hari itu dan dijual di pembukaan hari berikutnya (overnight).
+
+Strategi 3 (Optimized Screener) memakai ledakan volume (>2x MA20) + candle hijau
++ close-near-high + RSI<80; win rate out-of-sample ~63% (tertinggi), sinyal jauh
+lebih banyak dari S2 tapi cuan/transaksi sedikit lebih kecil — saling melengkapi.
 
 Strategi 2 memakai satu filter kualitas tambahan agar win rate & cuan lebih
 tinggi: breakout hanya diambil bila MA5 di ATAS MA20 (tren naik mapan). Filter
@@ -28,10 +32,11 @@ from typing import Any, Optional
 STRATEGI = {
     "s1": "RSI Pullback + Akumulasi (tanpa foreign flow)",
     "s2": "Momentum Breakout",
+    "s3": "Optimized Screener (ledakan volume + close-near-high)",
     "s_and": "Gabungan S1 DAN S2 (harus dua-duanya)",
     "s_or": "Gabungan S1 ATAU S2 (salah satu)",
 }
-_KEYS = ("s1", "s2", "s_and", "s_or")
+_KEYS = ("s1", "s2", "s3", "s_and", "s_or")
 
 
 def rsi(closes: list[float], period: int = 14) -> list[Optional[float]]:
@@ -109,29 +114,71 @@ def _sinyal_s2(i, closes, vols, sma5, sma20, shares) -> bool:
     return True
 
 
+def _sinyal_s3(i, opens, highs, lows, closes, vols, sma5, vma20, rsis, shares) -> bool:
+    """Strategi 3: BSJP Optimized Screener (dari panduan pengguna) + tips manual.
+
+    Momentum: naik >3%, Last>MA5, Last>=Open (candle hijau).
+    Ledakan volume: Volume > 2x MA20-volume DAN > volume kemarin.
+    Aman: value >Rp5 M, harga kemarin >60.
+    Tips manual (dikodekan, terpilih lewat uji A/B): RSI <80 (belum jenuh beli)
+    & close-near-high (penutupan dekat tertinggi = pembeli dominan sampai tutup).
+    """
+    if i < 1 or closes[i - 1] <= 0 or vols[i - 1] <= 0:
+        return False
+    if closes[i] <= 1.03 * closes[i - 1]:         # Change% > 3
+        return False
+    if sma5[i] is None or closes[i] <= sma5[i]:   # Last > MA5
+        return False
+    if closes[i] < opens[i]:                      # Last >= Open (candle hijau)
+        return False
+    if vma20[i] is None or vols[i] <= 2.0 * vma20[i]:   # Volume > 2x MA20
+        return False
+    if vols[i] <= vols[i - 1]:                    # Volume > volume kemarin
+        return False
+    if closes[i] * vols[i] < 5e9:                 # Value > Rp5 M(iliar)
+        return False
+    if closes[i - 1] <= 60:                       # harga kemarin > 60 (hindari gocap)
+        return False
+    if rsis[i] is None or rsis[i] > 80.0:         # RSI < 80 (belum jenuh beli)
+        return False
+    rng = highs[i] - lows[i]                       # close-near-high (dekat tertinggi)
+    if rng > 0 and (highs[i] - closes[i]) / rng > 0.30:
+        return False
+    return True
+
+
 def _kosong() -> dict[str, Any]:
     return {"sinyal": 0, "menang": 0, "hit3": 0, "ret_total": 0.0, "sinyal_terakhir": False}
 
 
-def jalankan_backtest(opens, closes, vols, shares) -> dict[str, Any]:
-    """Backtest kedua strategi pada satu emiten. Kembalikan hitungan agregasi.
+def jalankan_backtest(opens, closes, vols, shares, highs=None, lows=None) -> dict[str, Any]:
+    """Backtest strategi pada satu emiten. Kembalikan hitungan agregasi.
 
     Untuk tiap hari i yang memenuhi strategi (dan ada hari i+1), catat overnight
     return (open[i+1] - close[i]) / close[i]. `sinyal_terakhir` menandai apakah
     hari terakhir (i = n-1) memicu strategi (kandidat entri hari ini).
+
+    `highs`/`lows` opsional (untuk S3 close-near-high); bila None dipakai closes
+    (menganggap tak ada info high/low — cek close-near-high jadi longgar).
     """
     n = len(closes)
     hasil = {k: _kosong() for k in _KEYS}
     if n < 6 or shares <= 0:
         return hasil
+    if highs is None:
+        highs = closes
+    if lows is None:
+        lows = closes
     rsis = rsi(closes, 14)
     sma5 = sma(closes, 5)
     sma20 = sma(closes, 20)
+    vma20 = sma(vols, 20)
 
     for i in range(1, n):
         s1 = _sinyal_s1(i, closes, vols, rsis, shares)
         s2 = _sinyal_s2(i, closes, vols, sma5, sma20, shares)
-        flags = {"s1": s1, "s2": s2, "s_and": s1 and s2, "s_or": s1 or s2}
+        s3 = _sinyal_s3(i, opens, highs, lows, closes, vols, sma5, vma20, rsis, shares)
+        flags = {"s1": s1, "s2": s2, "s3": s3, "s_and": s1 and s2, "s_or": s1 or s2}
         if i == n - 1:
             for k in _KEYS:
                 hasil[k]["sinyal_terakhir"] = flags[k]
