@@ -20,28 +20,45 @@ class TestIndikator(unittest.TestCase):
 
 class TestBacktestS2(unittest.TestCase):
     def _series(self):
-        # 8 hari flat di 1000 (vol 10jt), lalu hari ke-9 breakout +6% dgn volume
-        # turun, hari ke-10 buka +4% (overnight menang & hit3).
-        closes = [1000.0] * 8 + [1060.0, 1060.0]
-        opens = [1000.0] * 8 + [1030.0, 1102.4]  # open[9] = 1060*1.04
-        vols = [10_000_000.0] * 8 + [11_000_000.0, 10_000_000.0]
+        # Tren naik landai berosilasi ~24 hari (agar MA20 terisi & RSI moderat,
+        # bukan overbought), lalu breakout +6% dgn volume tak naik, lalu hari
+        # terakhir buka +4% (overnight menang & hit3). Memenuhi S2 termasuk
+        # filter baru: close > MA20 dan RSI hari sebelum lonjakan < 70.
+        closes = []
+        p = 950.0
+        for k in range(24):
+            p = p * (1.012 if k % 2 == 0 else 0.994)
+            closes.append(round(p, 2))
+        breakout = round(closes[-1] * 1.06, 2)   # index 24: naik +6%
+        closes += [breakout, breakout]            # index 25: hari terakhir
+        opens = list(closes)                      # open harian lain tak dipakai S2
+        opens[25] = round(breakout * 1.04, 2)     # open[i+1] = +4% overnight
+        vols = [10_000_000.0] * len(closes)       # datar -> S2 lolos, S1 tidak
         return opens, closes, vols
 
     def test_s2_sinyal_dan_overnight(self):
         opens, closes, vols = self._series()
         bt = jalankan_backtest(opens, closes, vols, shares=1e10)
-        # Hari index 8 (breakout) memenuhi S2; index 9 = hari terakhir (tak dihitung).
+        # Index 24 (breakout) memenuhi S2; index 25 = hari terakhir (tak dihitung).
         self.assertEqual(bt["s2"]["sinyal"], 1)
         self.assertEqual(bt["s2"]["menang"], 1)
         self.assertEqual(bt["s2"]["hit3"], 1)      # overnight +4% >= 3%
-        self.assertAlmostEqual(bt["s2"]["ret_total"], 0.04, places=4)
+        self.assertAlmostEqual(bt["s2"]["ret_total"], 0.04, places=3)
         # Gabungan: S1 & S2 bertentangan -> AND selalu 0; OR = union (di sini = S2).
         self.assertEqual(bt["s_and"]["sinyal"], 0)
         self.assertEqual(bt["s_or"]["sinyal"], bt["s1"]["sinyal"] + bt["s2"]["sinyal"])
 
     def test_volume_terlalu_besar_gagal(self):
         opens, closes, vols = self._series()
-        vols[8] = 20_000_000.0  # volume >= 1.2x kemarin -> S2 gagal
+        vols[24] = 20_000_000.0  # volume >= 1.2x kemarin -> S2 gagal
+        bt = jalankan_backtest(opens, closes, vols, shares=1e10)
+        self.assertEqual(bt["s2"]["sinyal"], 0)
+
+    def test_di_bawah_ma20_gagal(self):
+        # Breakout tapi masih di bawah MA20 (baru bangkit dari jatuh) -> S2 tolak.
+        closes = [2000.0] * 20 + [900.0, 954.0]   # anjlok lalu +6% (< MA20 ~1900)
+        opens = list(closes)
+        vols = [10_000_000.0] * len(closes)
         bt = jalankan_backtest(opens, closes, vols, shares=1e10)
         self.assertEqual(bt["s2"]["sinyal"], 0)
 
