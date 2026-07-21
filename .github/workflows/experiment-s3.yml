@@ -1,0 +1,37 @@
+name: Eksperimen Strategi 3 (BSJP)
+
+# Uji Strategi 3 (BSJP Optimized Screener) + varian vs benchmark S2, split
+# train/test. TIDAK menulis ke docs/data — murni analitik.
+
+on:
+  workflow_dispatch:
+    inputs:
+      limit:
+        description: "Batasi jumlah emiten (0 = semua ~950)"
+        default: "0"
+        required: false
+
+jobs:
+  eksperimen:
+    runs-on: ubuntu-latest
+    timeout-minutes: 60
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: main
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - name: Install dependensi data
+        run: pip install -r requirements-data.txt
+      - name: Jalankan eksperimen S3
+        env:
+          DRAFTNEST_EXP_LIMIT: ${{ inputs.limit }}
+        run: python -m draftnest.experiment_s3 | tee experiment_s3_result.txt
+      - name: Ringkas ke step summary
+        if: always()
+        run: |
+          echo '### Hasil Eksperimen Strategi 3 (win rate TEST / out-of-sample)' >> "$GITHUB_STEP_SUMMARY"
+          echo '```' >> "$GITHUB_STEP_SUMMARY"
+          sed -n '/===EXPERIMENT_S3_BEGIN===/,/===EXPERIMENT_S3_END===/p' experiment_s3_result.txt >> "$GITHUB_STEP_SUMMARY" || true
+          echo '```' >> "$GITHUB_STEP_SUMMARY"

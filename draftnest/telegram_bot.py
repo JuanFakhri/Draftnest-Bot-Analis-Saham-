@@ -38,6 +38,10 @@ SUBS_FILE = Path(os.environ.get("DRAFTNEST_STATE_DIR", str(ROOT))) / ".draftnest
 SCAN_JAM = os.environ.get("DRAFTNEST_SCAN_TIME", "15:20")
 # Selang auto-ambil data dari GitHub (menit). 0 = matikan. Default 60.
 GIT_SYNC_MENIT = int(os.environ.get("DRAFTNEST_GIT_SYNC_MIN", "60") or 60)
+# Target profit (TP) & stop loss (SL) BSJP, fraksi dari harga beli (sore).
+# Panduan: target jual pagi 1-3%, cut loss 2-3%. Default TP +3%, SL -2.5%.
+BSJP_TP = float(os.environ.get("DRAFTNEST_BSJP_TP", "0.03"))
+BSJP_SL = float(os.environ.get("DRAFTNEST_BSJP_SL", "0.025"))
 
 
 def _wib():
@@ -304,8 +308,20 @@ def scan_realtime(delay: float = 0.3) -> tuple[bool, str]:
         return True, ringkasan_scan()
 
 
+def _baris_sinyal(e: dict) -> str:
+    """Satu baris kandidat + entry/TP/SL bila harga tersedia."""
+    dasar = f"• <code>{_esc(e['kode'])}</code> {_esc((e.get('nama') or '')[:20])}"
+    h = e.get("harga")
+    if not h:
+        return dasar
+    tp = h * (1 + BSJP_TP)
+    sl = h * (1 - BSJP_SL)
+    return (f"{dasar}\n    beli ~{_rp(h)} · 🎯TP {_rp(tp)} (+{BSJP_TP*100:.1f}%) · "
+            f"🛑SL {_rp(sl)} (−{BSJP_SL*100:.1f}%)")
+
+
 def ringkasan_scan() -> str:
-    """Ringkas kandidat BSJP dari screener.json terbaru (S2 & S1) + win rate."""
+    """Ringkas kandidat BSJP dari screener.json terbaru (S2 & S1) + win rate + TP/SL."""
     em = muat_screener()
     diperbarui = (_baca_json(DATA_DIR / "screener.json") or {}).get("diperbarui", "?")
     bt = (muat_backtest() or {}).get("strategi", {})
@@ -322,11 +338,13 @@ def ringkasan_scan() -> str:
     s2 = sorted(s2, key=lambda e: (e.get("bsjp_peluang") or 0), reverse=True)
     L = [f"🌙 <b>Scan BSJP</b> (data {diperbarui}):", ""]
     L.append(f"<b>Strategi 2 — Momentum</b> ({len(s2)} sinyal){_wr('s2')}")
-    L += [f"• <code>{_esc(e['kode'])}</code> {_esc((e.get('nama') or '')[:22])}" for e in s2[:15]] or ["  (tidak ada)"]
+    L += [_baris_sinyal(e) for e in s2[:15]] or ["  (tidak ada)"]
     L.append("")
     L.append(f"<b>Strategi 1 — RSI Pullback</b> ({len(s1)} sinyal){_wr('s1')}")
-    L += [f"• <code>{_esc(e['kode'])}</code> {_esc((e.get('nama') or '')[:22])}" for e in s1[:15]] or ["  (tidak ada)"]
-    L.append("\n⚠️ <i>Win rate = historis backtest ~6th, bukan jaminan. Risiko gap-down.</i>")
+    L += [_baris_sinyal(e) for e in s1[:15]] or ["  (tidak ada)"]
+    L.append(f"\n<i>TP jual pagi (09.00–09.15) +{BSJP_TP*100:.1f}%, "
+             f"SL disiplin −{BSJP_SL*100:.1f}%. Entry = harga sore (~15.50).</i>")
+    L.append("⚠️ <i>Win rate = historis backtest ~6th, bukan jaminan. Risiko gap-down.</i>")
     return "\n".join(L)
 
 
