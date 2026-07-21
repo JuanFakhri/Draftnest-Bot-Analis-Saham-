@@ -1,0 +1,38 @@
+name: Eksperimen Filter S2 (BSJP)
+
+# Uji A/B banyak varian filter Strategi 2 sekaligus (sekali ambil histori),
+# split train/test, cetak tabel perbandingan ke log + step summary.
+# TIDAK menulis ke docs/data — murni analitik, tak mengubah data produksi.
+
+on:
+  workflow_dispatch:
+    inputs:
+      limit:
+        description: "Batasi jumlah emiten (0 = semua ~950)"
+        default: "0"
+        required: false
+
+jobs:
+  eksperimen:
+    runs-on: ubuntu-latest
+    timeout-minutes: 60
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: main
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - name: Install dependensi data
+        run: pip install -r requirements-data.txt
+      - name: Jalankan eksperimen S2
+        env:
+          DRAFTNEST_EXP_LIMIT: ${{ inputs.limit }}
+        run: python -m draftnest.experiment_s2 | tee experiment_result.txt
+      - name: Ringkas ke step summary
+        if: always()
+        run: |
+          echo '### Hasil Eksperimen Filter S2 (win rate TEST / out-of-sample)' >> "$GITHUB_STEP_SUMMARY"
+          echo '```' >> "$GITHUB_STEP_SUMMARY"
+          sed -n '/===EXPERIMENT_S2_BEGIN===/,/===EXPERIMENT_S2_END===/p' experiment_result.txt >> "$GITHUB_STEP_SUMMARY" || true
+          echo '```' >> "$GITHUB_STEP_SUMMARY"
