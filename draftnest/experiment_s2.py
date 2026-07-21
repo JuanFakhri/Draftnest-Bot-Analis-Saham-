@@ -78,6 +78,8 @@ VARIAN = {
     "MA5 > MA20":                make_filter(ma5_above_ma20=True),
     "likuid>=20M + cap<=10%":    make_filter(val_min=20e9, up_max=0.10),
     "MA20+RSI<70 (skrg)":        make_filter(need_ma20=True, rsi_max=70.0),
+    "MA5>MA20 + RSI<70":         make_filter(ma5_above_ma20=True, rsi_max=70.0),
+    "MA5>MA20 + MA20 + RSI<70":  make_filter(ma5_above_ma20=True, need_ma20=True, rsi_max=70.0),
 }
 
 
