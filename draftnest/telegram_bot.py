@@ -337,9 +337,14 @@ def ringkasan_scan() -> str:
 
     s2 = [e for e in em if e.get("strat2_sinyal")]
     s2 = sorted(s2, key=lambda e: (e.get("bsjp_peluang") or 0), reverse=True)
-    L = [f"🌙 <b>Scan BSJP — Momentum</b> (data {diperbarui}):"]
-    L.append(f"<b>Strategi 2 — Momentum</b> ({len(s2)} sinyal){_wr('s2')}")
+    s3 = [e for e in em if e.get("strat3_sinyal")]
+    s3 = sorted(s3, key=lambda e: (e.get("bsjp_peluang") or 0), reverse=True)
+    L = [f"🌙 <b>Scan BSJP</b> (data {diperbarui}):", ""]
+    L.append(f"<b>Strategi 2 — Momentum Breakout</b> ({len(s2)} sinyal){_wr('s2')}")
     L += [_baris_sinyal(e) for e in s2[:15]] or ["  (tidak ada)"]
+    L.append("")
+    L.append(f"<b>Strategi 3 — Optimized Screener</b> ({len(s3)} sinyal){_wr('s3')}")
+    L += [_baris_sinyal(e) for e in s3[:15]] or ["  (tidak ada)"]
     L.append(f"\n<i>TP jual pagi (09.00–09.15) +{BSJP_TP*100:.1f}%, "
              f"SL disiplin −{BSJP_SL*100:.1f}%. Entry = harga sore (~15.50).</i>")
     L.append("⚠️ <i>Win rate = historis backtest ~6th, bukan jaminan. Risiko gap-down.</i>")

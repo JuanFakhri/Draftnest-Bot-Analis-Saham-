@@ -63,6 +63,43 @@ class TestBacktestS2(unittest.TestCase):
         self.assertEqual(bt["s2"]["sinyal"], 0)
 
 
+class TestBacktestS3(unittest.TestCase):
+    def _series(self):
+        # Osilasi naik landai, hari ke-24 breakout +4% candle hijau + volume
+        # meledak (>2x MA20) + close dekat high, RSI<80; hari terakhir buka +2%.
+        closes = []
+        p = 900.0
+        for k in range(24):
+            p = p * (1.010 if k % 2 == 0 else 0.995)
+            closes.append(round(p, 2))
+        bo = round(closes[-1] * 1.04, 2)
+        closes += [bo, bo]
+        n = len(closes)
+        opens = list(closes)
+        opens[n - 2] = round(closes[n - 3] * 1.005, 2)   # buka di atas -> hijau
+        opens[n - 1] = round(bo * 1.02, 2)               # overnight +2%
+        highs = list(closes)
+        highs[n - 2] = round(bo * 1.002, 2)              # high sedikit di atas close
+        lows = list(closes)
+        lows[n - 2] = round(closes[n - 3] * 0.999, 2)
+        vols = [5_000_000.0] * n
+        vols[n - 2] = 25_000_000.0                       # volume meledak
+        return opens, highs, lows, closes, vols
+
+    def test_s3_sinyal_dan_menang(self):
+        opens, highs, lows, closes, vols = self._series()
+        bt = jalankan_backtest(opens, closes, vols, shares=1e10, highs=highs, lows=lows)
+        self.assertEqual(bt["s3"]["sinyal"], 1)
+        self.assertEqual(bt["s3"]["menang"], 1)
+
+    def test_s3_volume_biasa_gagal(self):
+        # Volume tak meledak (<=2x MA20) -> S3 tolak.
+        opens, highs, lows, closes, vols = self._series()
+        vols[-2] = 6_000_000.0
+        bt = jalankan_backtest(opens, closes, vols, shares=1e10, highs=highs, lows=lows)
+        self.assertEqual(bt["s3"]["sinyal"], 0)
+
+
 class TestAgregasi(unittest.TestCase):
     def test_agregasi_rate(self):
         per = [
