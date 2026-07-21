@@ -1,0 +1,37 @@
+name: Eksperimen Filter S1 (BSJP)
+
+# Uji A/B varian filter Strategi 1 (RSI Pullback) sekaligus, split train/test.
+# TIDAK menulis ke docs/data — murni analitik.
+
+on:
+  workflow_dispatch:
+    inputs:
+      limit:
+        description: "Batasi jumlah emiten (0 = semua ~950)"
+        default: "0"
+        required: false
+
+jobs:
+  eksperimen:
+    runs-on: ubuntu-latest
+    timeout-minutes: 60
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: main
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - name: Install dependensi data
+        run: pip install -r requirements-data.txt
+      - name: Jalankan eksperimen S1
+        env:
+          DRAFTNEST_EXP_LIMIT: ${{ inputs.limit }}
+        run: python -m draftnest.experiment_s1 | tee experiment_s1_result.txt
+      - name: Ringkas ke step summary
+        if: always()
+        run: |
+          echo '### Hasil Eksperimen Filter S1 (win rate TEST / out-of-sample)' >> "$GITHUB_STEP_SUMMARY"
+          echo '```' >> "$GITHUB_STEP_SUMMARY"
+          sed -n '/===EXPERIMENT_S1_BEGIN===/,/===EXPERIMENT_S1_END===/p' experiment_s1_result.txt >> "$GITHUB_STEP_SUMMARY" || true
+          echo '```' >> "$GITHUB_STEP_SUMMARY"
