@@ -90,16 +90,23 @@
   "backtest": {
     "s1": {
       "sinyal": 92,
-      "menang": 55,
+      "menang": 45,
       "hit3": 0,
-      "ret_total": 0.10111607816550937,
+      "ret_total": 0.10111390117613933,
       "sinyal_terakhir": false
     },
     "s2": {
       "sinyal": 5,
       "menang": 5,
       "hit3": 0,
-      "ret_total": 0.04356002900958589,
+      "ret_total": 0.0435600713340234,
+      "sinyal_terakhir": false
+    },
+    "s3": {
+      "sinyal": 16,
+      "menang": 13,
+      "hit3": 0,
+      "ret_total": 0.09354688318770218,
       "sinyal_terakhir": false
     },
     "s_and": {
@@ -111,9 +118,9 @@
     },
     "s_or": {
       "sinyal": 97,
-      "menang": 60,
+      "menang": 50,
       "hit3": 0,
-      "ret_total": 0.14467610717509527,
+      "ret_total": 0.14467397251016278,
       "sinyal_terakhir": false
     }
   },
@@ -125,7 +132,7 @@
     "median_gap": 1.7984519756954528e-08,
     "rata_gap_positif": 0.0035049308399944133,
     "volatilitas_gap": 0.006696795076652078,
-    "volume_rata": 1549705.928853755,
+    "volume_rata": 1550803.557312253,
     "target": 0.03
   }
 }
