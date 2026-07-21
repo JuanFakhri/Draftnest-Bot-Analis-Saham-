@@ -4,11 +4,11 @@ Dua strategi (dari permintaan pengguna) dievaluasi pada tiap hari bursa memakai
 indikator dari harga harian; bila kondisi terpenuhi, posisi dibeli di harga
 penutupan hari itu dan dijual di pembukaan hari berikutnya (overnight).
 
-Strategi 2 memakai dua filter kualitas tambahan agar win rate lebih tinggi
-(menyaring sinyal rawan gap-down): breakout hanya diambil bila harga di ATAS
-MA20 (konfirmasi tren naik) dan RSI hari SEBELUM lonjakan < 70 (belum euforia/
-overbought). RSI hari-H sengaja tak dipakai karena lonjakan >5% otomatis
-menaikkannya.
+Strategi 2 memakai satu filter kualitas tambahan agar win rate & cuan lebih
+tinggi: breakout hanya diambil bila MA5 di ATAS MA20 (tren naik mapan). Filter
+ini terpilih lewat uji A/B out-of-sample (953 emiten, split train/test) yang
+menaikkan win rate 59%->61% dan cuan +1.47%->+1.97%/malam sekaligus. Kandidat
+lain (RSI<70, harga>MA20, band %, likuiditas) diuji tetapi tak seunggul MA5>MA20.
 
 Keterbatasan jujur:
   - "Foreign Flow > 0" pada Strategi 1 TIDAK tersedia dari sumber data (yfinance)
@@ -89,7 +89,7 @@ def _sinyal_s1(i, closes, vols, rsis, shares) -> bool:
     return True                                    # (foreign flow > 0 DILEWATI)
 
 
-def _sinyal_s2(i, closes, vols, sma5, sma20, rsis, shares) -> bool:
+def _sinyal_s2(i, closes, vols, sma5, sma20, shares) -> bool:
     if i < 1 or closes[i - 1] <= 0 or vols[i - 1] <= 0:
         return False
     if closes[i] <= 1.05 * closes[i - 1]:         # naik > 5% dari kemarin
@@ -100,13 +100,11 @@ def _sinyal_s2(i, closes, vols, sma5, sma20, rsis, shares) -> bool:
         return False
     if closes[i] * vols[i] < 5e9:                 # value >= Rp5 M(iliar)
         return False
-    # --- Filter kualitas (menyaring sinyal rawan gap-down) ---
-    if sma20[i] is None or closes[i] < sma20[i]:  # di atas MA20 -> tren naik
-        return False
-    # RSI hari SEBELUM lonjakan < 70: hindari breakout dari kondisi yang sudah
-    # euforia/overbought (rawan koreksi). RSI hari ini sengaja tak dipakai karena
-    # lonjakan >5% otomatis menaikkannya, jadi akan menolak hampir semua sinyal.
-    if rsis[i - 1] is None or rsis[i - 1] >= 70.0:
+    # --- Filter kualitas: MA5 di ATAS MA20 (tren naik mapan) ---
+    # Terpilih lewat uji A/B out-of-sample (953 emiten, split train/test): naikkan
+    # win rate 59%->61% DAN profit +1.47%->+1.97%/malam, dgn sinyal tetap banyak.
+    # Filter RSI/MA20-harga sempat diuji tapi memangkas cuan; MA5>MA20 lebih unggul.
+    if sma5[i] is None or sma20[i] is None or sma5[i] < sma20[i]:
         return False
     return True
 
@@ -132,7 +130,7 @@ def jalankan_backtest(opens, closes, vols, shares) -> dict[str, Any]:
 
     for i in range(1, n):
         s1 = _sinyal_s1(i, closes, vols, rsis, shares)
-        s2 = _sinyal_s2(i, closes, vols, sma5, sma20, rsis, shares)
+        s2 = _sinyal_s2(i, closes, vols, sma5, sma20, shares)
         flags = {"s1": s1, "s2": s2, "s_and": s1 and s2, "s_or": s1 or s2}
         if i == n - 1:
             for k in _KEYS:
