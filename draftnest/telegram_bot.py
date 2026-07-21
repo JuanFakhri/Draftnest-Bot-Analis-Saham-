@@ -36,6 +36,8 @@ API = "https://api.telegram.org/bot{token}/{method}"
 SUBS_FILE = Path(os.environ.get("DRAFTNEST_STATE_DIR", str(ROOT))) / ".draftnest_subs.json"
 # Jam scan otomatis harian (WIB), format "HH:MM". Default 15:20.
 SCAN_JAM = os.environ.get("DRAFTNEST_SCAN_TIME", "15:20")
+# Selang auto-ambil data dari GitHub (menit). 0 = matikan. Default 60.
+GIT_SYNC_MENIT = int(os.environ.get("DRAFTNEST_GIT_SYNC_MIN", "60") or 60)
 
 
 def _wib():
@@ -94,6 +96,7 @@ def _daftar_perintah() -> str:
         "• /dividen — dividend yield tertinggi\n"
         "• /bsjp — sinyal Beli Sore Jual Pagi + win rate\n"
         "• /scan — pindai sinyal BSJP REALTIME sekarang\n"
+        "• /update — ambil data terbaru dari GitHub sekarang\n"
         f"• /langganan — terima hasil scan otomatis tiap hari kerja {SCAN_JAM} WIB\n"
         "• /berhenti — berhenti berlangganan\n"
         "• /cari <code>kata</code> — cari kode emiten\n"
@@ -318,6 +321,63 @@ def ringkasan_scan() -> str:
     return "\n".join(L)
 
 
+# ============================ Auto-ambil data (git) =========================
+
+_git_lock = threading.Lock()
+
+
+def git_sync(repo_dir: Path = ROOT) -> tuple[bool, str]:
+    """Ambil `docs/data/` terbaru dari GitHub (branch main) tanpa mengubah kode.
+
+    Pipeline harian menulis data ke `main`; fungsi ini menariknya ke VPS agar
+    bot menyajikan data segar tanpa `git pull` manual. Aman: hanya menimpa
+    `docs/data` (bukan kode/`.draftnest_subs.json` yang di-gitignore).
+
+    Kembalikan (sukses, ringkasan). Gagal dengan anggun bila `git` tak ada,
+    folder bukan repo, atau tak ada jaringan — data lama tetap dipakai.
+    """
+    import subprocess
+
+    if _git_lock.locked():
+        return False, "Sinkronisasi git lain sedang berjalan."
+    with _git_lock:
+        if not (repo_dir / ".git").exists():
+            return False, ("Folder ini bukan clone git (mis. dari ZIP). "
+                           "Auto-update butuh `git clone`. Lihat PANDUAN-BOT.md.")
+
+        def _git(*args: str) -> tuple[int, str]:
+            try:
+                p = subprocess.run(
+                    ["git", "-C", str(repo_dir), *args],
+                    capture_output=True, text=True, timeout=120,
+                )
+                return p.returncode, (p.stdout + p.stderr).strip()
+            except FileNotFoundError:
+                return 127, "git tidak terpasang"
+            except Exception as e:  # timeout dll
+                return 1, str(e)
+
+        rc, out = _git("fetch", "origin", "main", "--quiet")
+        if rc != 0:
+            return False, f"Gagal fetch dari GitHub: {_esc(out) or 'error jaringan'}"
+        # Timpa hanya docs/data dari origin/main (surgical, tak sentuh kode).
+        rc, out = _git("checkout", "origin/main", "--", "docs/data")
+        if rc != 0:
+            return False, f"Gagal ambil data: {_esc(out)}"
+
+        diperbarui = (_baca_json(DATA_DIR / "screener.json") or {}).get("diperbarui", "?")
+        return True, f"Data ter-update dari GitHub (screener {diperbarui})."
+
+
+def _penyelaras_git(interval_menit: int) -> None:
+    """Thread latar: ambil data terbaru dari GitHub tiap `interval_menit`."""
+    tidur = max(300, interval_menit * 60)   # minimal 5 menit
+    while True:
+        time.sleep(tidur)
+        ok, msg = git_sync()
+        print(f"[git-sync] {'ok' if ok else 'lewat'}: {msg}")
+
+
 # ============================ Dispatcher ====================================
 
 def tangani_pesan(teks: str) -> str:
@@ -412,6 +472,10 @@ class TelegramBot:
             self.kirim(chat_id, "⏳ Memindai sinyal BSJP realtime… (bisa beberapa menit)")
             threading.Thread(target=self._scan_dan_balas, args=(chat_id,), daemon=True).start()
             return True
+        if cmd in ("update", "sinkron", "sync"):
+            ok, msg = git_sync()
+            self.kirim(chat_id, ("✅ " if ok else "⚠️ ") + msg)
+            return True
         if cmd in ("langganan", "subscribe"):
             subs = muat_pelanggan(); subs.add(chat_id); simpan_pelanggan(subs)
             self.kirim(chat_id, f"✅ Berlangganan. Anda akan menerima hasil scan otomatis "
@@ -443,6 +507,9 @@ class TelegramBot:
             time.sleep(max(30, tidur))
             if not muat_pelanggan():
                 continue                       # tak ada yang dikirimi
+            # Ambil data terbaru dulu (kalau scan gagal, ringkasan tetap segar).
+            gok, gmsg = git_sync()
+            print(f"[jadwal] git-sync: {gmsg}")
             print("[jadwal] menjalankan scan otomatis…")
             ok, teks = scan_realtime()
             if ok:
@@ -453,6 +520,12 @@ class TelegramBot:
         nama = (me or {}).get("result", {}).get("username", "?")
         print(f"✅ Bot @{nama} jalan. Scan otomatis {SCAN_JAM} WIB (Sen–Jum). "
               f"Ctrl+C untuk berhenti.")
+        # Ambil data terbaru saat mulai, lalu jadwalkan sinkronisasi berkala.
+        if GIT_SYNC_MENIT > 0:
+            ok, msg = git_sync()
+            print(f"[git-sync] awal: {msg}")
+            threading.Thread(target=_penyelaras_git, args=(GIT_SYNC_MENIT,),
+                             daemon=True).start()
         threading.Thread(target=self._penjadwal, daemon=True).start()
         offset = None
         while True:

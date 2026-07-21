@@ -2,9 +2,9 @@
 
 Langkah demi langkah dari nol sampai bot jalan 24 jam + scan BSJP otomatis 15:20 WIB.
 
-> Ringkasnya: install Python → ambil kode → install dependensi → buat bot di
-> @BotFather → set token → jalankan → (opsional) pasang sebagai service biar
-> jalan terus.
+> Ringkasnya: install Python → **git clone** kode → install dependensi → buat
+> bot di @BotFather → set token → jalankan → (opsional) pasang sebagai service
+> biar jalan terus. Data saham ter-update sendiri dari GitHub (butuh git clone).
 
 ---
 
@@ -30,23 +30,24 @@ Desktop"), masukkan **IP VPS**, **username**, **password** dari penyedia VPS And
 
 ---
 
-## 3. Ambil kode Draftnest
+## 3. Ambil kode Draftnest (pakai Git — disarankan)
 
-**Cara mudah (tanpa Git): unduh ZIP**
-
-1. Buka https://github.com/JuanFakhri/Draftnest-Bot-Analis-Saham-
-2. Tombol hijau **Code** → **Download ZIP**.
-3. Ekstrak ke, misalnya, `C:\draftnest` (klik kanan ZIP → Extract All).
-   Sesudah ekstrak, pastikan file `requirements-bot.txt` ada di
-   `C:\draftnest\` (kalau ada folder ganda, masuk ke folder yang berisi file itu).
-
-**Atau pakai Git** (kalau mau `git pull` untuk update nanti):
+> **Penting:** ambil kode dengan **`git clone`**, bukan ZIP. Bot mengambil data
+> saham terbaru otomatis lewat `git` (lihat langkah 10), dan itu **hanya jalan
+> kalau folder ini adalah clone git**. ZIP tidak bisa auto-update.
 
 ```powershell
 winget install --id Git.Git -e --source winget
+# Tutup lalu buka lagi PowerShell agar `git` terbaca, lalu:
 cd C:\
 git clone https://github.com/JuanFakhri/Draftnest-Bot-Analis-Saham-.git draftnest
 ```
+
+Sesudah clone, pastikan file `requirements-bot.txt` ada di `C:\draftnest\`.
+
+**Alternatif tanpa Git (ZIP):** buka repo di GitHub → tombol hijau **Code** →
+**Download ZIP** → ekstrak ke `C:\draftnest`. Cara ini jalan, tapi **data tidak
+ter-update otomatis** — Anda harus unduh ZIP baru tiap kali ingin data segar.
 
 ---
 
@@ -121,6 +122,7 @@ Buka Telegram → cari **username bot** Anda → mulai chat → coba:
 | `/dividen` | Dividend yield tertinggi |
 | `/bsjp` | Sinyal + win rate backtest |
 | **`/scan`** | **Pindai sinyal BSJP realtime sekarang** (agak lama, ambil harga live) |
+| **`/update`** | **Ambil data saham terbaru dari GitHub sekarang** |
 | **`/langganan`** | Daftar untuk terima scan otomatis 15:20 WIB |
 | `/cari bank` | Cari kode emiten |
 
@@ -163,19 +165,44 @@ Perintah berguna:
 
 ---
 
-## 10. Scan otomatis 15:20 WIB
+## 10. Data ter-update otomatis dari GitHub
+
+Pipeline harian Draftnest menulis data saham terbaru ke GitHub. Bot di VPS
+**menariknya sendiri lewat `git`** — Anda tidak perlu `git pull` manual:
+
+- **Saat bot mulai** → langsung ambil data terbaru.
+- **Setiap 60 menit** → ambil ulang data terbaru (hanya folder `docs/data`,
+  kode & daftar pelanggan tidak tersentuh).
+- **Menjelang scan sore** → ambil data terbaru dulu sebelum kirim ke pelanggan.
+- Kapan saja bisa paksa lewat perintah **`/update`** di Telegram.
+
+Atur selang auto-update (menit) lewat variabel `DRAFTNEST_GIT_SYNC_MIN`
+(default `60`, isi `0` untuk mematikan):
+
+```powershell
+setx DRAFTNEST_GIT_SYNC_MIN "60"
+```
+
+> Syarat: kode diambil via **`git clone`** (langkah 3), bukan ZIP. Kalau dari
+> ZIP, perintah `/update` akan memberi tahu bahwa folder bukan clone git.
+
+---
+
+## 11. Scan otomatis 15:20 WIB
 
 - Kirim **`/langganan`** ke bot dari akun Telegram Anda (boleh beberapa orang).
-- Tiap hari kerja **15:20 WIB**, bot otomatis: ambil harga live semua emiten →
-  hitung sinyal BSJP → **kirim hasilnya** ke semua pelanggan.
+- Tiap hari kerja **15:20 WIB**, bot otomatis: ambil data terbaru dari GitHub →
+  ambil harga live semua emiten → hitung sinyal BSJP → **kirim hasilnya** ke
+  semua pelanggan.
 - Mau ganti jam? ubah `DRAFTNEST_SCAN_TIME` (mis. `15:30`) lalu restart service.
 - `/berhenti` untuk stop langganan.
 
 ---
 
-## 11. Update kode nanti
+## 12. Update kode nanti
 
-Kalau ada perbaikan/fitur baru:
+**Data saham** ter-update sendiri (langkah 10). Bagian ini untuk update **kode
+program** (perbaikan/fitur baru):
 
 ```powershell
 cd C:\draftnest
@@ -194,6 +221,8 @@ python -m pip install -r requirements-bot.txt
 | `Set dulu TELEGRAM_BOT_TOKEN` | Token belum ke-set / PowerShell belum dibuka ulang setelah `setx` |
 | `/scan` error / kosong | Butuh `yfinance` (`requirements-data.txt`); di luar jam bursa hasil bisa ditolak circuit-breaker (wajar) |
 | Jam scan meleset | Install `tzdata` (`python -m pip install tzdata`) |
+| `/update`: "bukan clone git" | Kode diambil dari ZIP → ambil ulang via `git clone` (langkah 3) agar bisa auto-update data |
+| Data tidak ter-update | Pastikan `git` terpasang & folder hasil `git clone`; cek log bot ada baris `[git-sync]` |
 | Bot mati saat logout RDP | Pasang sebagai service dengan NSSM (langkah 9) |
 
 ---
