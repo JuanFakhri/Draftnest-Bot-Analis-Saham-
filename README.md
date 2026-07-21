@@ -21,6 +21,82 @@ Tersedia dalam **dua bentuk**:
 
 ---
 
+## 🤖 Bot Telegram
+
+Analisis saham IDX langsung dari chat Telegram — memakai ulang seluruh mesin
+Draftnest (skor 3 pilar deterministik, screener, dividen, BSJP) + data pra-ambil
+di `docs/data/`. Ringan: hanya butuh `requests` (long-polling), tanpa framework.
+
+**Setup (sekali):**
+1. Buka **@BotFather** di Telegram → `/newbot` → ikuti langkahnya → salin **token**-nya.
+2. Jalankan botnya:
+
+```bash
+pip install -r requirements-bot.txt      # analisis dari data pra-ambil
+pip install -r requirements-data.txt     # + yfinance, untuk /scan realtime (di VPS)
+export TELEGRAM_BOT_TOKEN="123456:ABC-DEF..."   # token dari @BotFather
+python -m draftnest.telegram_bot
+```
+
+3. Buka chat dengan bot Anda di Telegram, ketik `/start`.
+
+**Perintah:**
+
+| Perintah | Fungsi |
+|---|---|
+| `BBCA` (ketik kode saja) | Analisis cepat 1 emiten |
+| `/analisis <KODE>` | Skor 3 pilar + rekomendasi + nilai wajar + target harga |
+| `/screener` | Saham tumbuh tiap tahun + dividen + prospek bagus |
+| `/dividen` | Dividend yield tertinggi |
+| `/bsjp` | Sinyal Beli Sore Jual Pagi + win rate backtest (`/bsjp s1` untuk RSI Pullback) |
+| `/scan` | **Pindai sinyal BSJP realtime sekarang** (ambil harga live) |
+| `/langganan` | Terima hasil scan **otomatis tiap hari kerja 15:20 WIB** |
+| `/berhenti` | Berhenti berlangganan |
+| `/cari <kata>` | Cari kode emiten |
+| `/help` | Bantuan |
+
+### Scan realtime di VPS (jam 15:20 WIB)
+
+Dijalankan di **VPS** (akses internet langsung, tanpa CORS), bot bisa **memindai
+sendiri** tanpa GitHub Actions:
+
+- **Scan terjadwal**: setiap hari kerja **15:20 WIB** (dapat diatur via env
+  `DRAFTNEST_SCAN_TIME="15:20"`), bot mengambil harga live semua emiten,
+  menghitung ulang sinyal BSJP, dan **mengirim hasilnya** ke semua yang
+  `/langganan`. Sinyal dievaluasi ~30–40 menit sebelum bursa tutup — pas untuk
+  "beli sore".
+- **`/scan` on-demand**: pindai kapan saja (butuh `yfinance`).
+- **Circuit-breaker**: bila snapshot tak wajar (di luar jam bursa / rate-limit),
+  scan dibatalkan dan data lama dipertahankan.
+
+Contoh menjalankan sebagai layanan di VPS (systemd):
+
+```ini
+# /etc/systemd/system/draftnest-bot.service
+[Unit]
+Description=Draftnest Telegram Bot
+After=network-online.target
+
+[Service]
+WorkingDirectory=/opt/Draftnest-Bot-Analis-Saham-
+Environment=TELEGRAM_BOT_TOKEN=123456:ABC-DEF...
+Environment=DRAFTNEST_SCAN_TIME=15:20
+ExecStart=/usr/bin/python3 -m draftnest.telegram_bot
+Restart=always
+
+[Install]
+WantedBy=multi-user.target
+```
+
+```bash
+sudo systemctl enable --now draftnest-bot   # jalan terus + auto-restart
+journalctl -u draftnest-bot -f              # lihat log
+```
+
+> Perintah non-scan (analisis/screener/dividen) memakai data di `docs/data/`
+> (diperbarui pipeline). `/scan` & jadwal 15:20 WIB mengambil harga **live** via
+> yfinance, jadi selalu terkini di VPS.
+
 ## 🌐 Website (GitHub Pages)
 
 Situs statis di folder [`docs/`](docs/). Berjalan penuh di browser:
@@ -250,6 +326,7 @@ draftnest/
     valuasi.py     # Pilar 3: prompt interpretasi valuasi
   report.py        # gabung 3 pilar -> skor akhir + rekomendasi
   formatter.py     # render laporan Markdown
+  telegram_bot.py  # Bot Telegram (long-polling) — analisis/screener/dividen/BSJP via chat
   cli.py           # antarmuka baris perintah
 data/ICBP.json     # contoh emiten (ilustratif)
 docs/              # website statis (GitHub Pages)
