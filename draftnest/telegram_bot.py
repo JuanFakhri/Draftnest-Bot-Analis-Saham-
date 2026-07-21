@@ -305,19 +305,28 @@ def scan_realtime(delay: float = 0.3) -> tuple[bool, str]:
 
 
 def ringkasan_scan() -> str:
-    """Ringkas kandidat BSJP dari screener.json terbaru (S2 & S1)."""
+    """Ringkas kandidat BSJP dari screener.json terbaru (S2 & S1) + win rate."""
     em = muat_screener()
     diperbarui = (_baca_json(DATA_DIR / "screener.json") or {}).get("diperbarui", "?")
+    bt = (muat_backtest() or {}).get("strategi", {})
+
+    def _wr(kunci: str) -> str:
+        v = bt.get(kunci) or {}
+        if v.get("win_rate") is None:
+            return ""
+        return (f"\n  <i>win rate backtest {_pct(v.get('win_rate'))}, "
+                f"rata gain semalam {_pct(v.get('rata_overnight'))}</i>")
+
     s2 = [e for e in em if e.get("strat2_sinyal")]
     s1 = [e for e in em if e.get("strat1_sinyal")]
     s2 = sorted(s2, key=lambda e: (e.get("bsjp_peluang") or 0), reverse=True)
     L = [f"🌙 <b>Scan BSJP</b> (data {diperbarui}):", ""]
-    L.append(f"<b>Strategi 2 — Momentum</b> ({len(s2)} sinyal):")
+    L.append(f"<b>Strategi 2 — Momentum</b> ({len(s2)} sinyal){_wr('s2')}")
     L += [f"• <code>{_esc(e['kode'])}</code> {_esc((e.get('nama') or '')[:22])}" for e in s2[:15]] or ["  (tidak ada)"]
     L.append("")
-    L.append(f"<b>Strategi 1 — RSI Pullback</b> ({len(s1)} sinyal):")
+    L.append(f"<b>Strategi 1 — RSI Pullback</b> ({len(s1)} sinyal){_wr('s1')}")
     L += [f"• <code>{_esc(e['kode'])}</code> {_esc((e.get('nama') or '')[:22])}" for e in s1[:15]] or ["  (tidak ada)"]
-    L.append("\n⚠️ <i>Historis/best-effort, bukan jaminan. Risiko gap-down.</i>")
+    L.append("\n⚠️ <i>Win rate = historis backtest ~6th, bukan jaminan. Risiko gap-down.</i>")
     return "\n".join(L)
 
 
