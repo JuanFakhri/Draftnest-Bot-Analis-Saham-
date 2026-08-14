@@ -73,7 +73,7 @@
     }
   ],
   "pasar": {
-    "harga_saham": 2630.0,
+    "harga_saham": 2800.0,
     "saham_beredar": 18199862451.0,
     "per_sektor": null,
     "pbv_sektor": null,
@@ -90,9 +90,9 @@
   "backtest": {
     "s1": {
       "sinyal": 66,
-      "menang": 40,
+      "menang": 41,
       "hit3": 0,
-      "ret_total": 0.12082686709795994,
+      "ret_total": 0.12082727434059358,
       "sinyal_terakhir": false
     },
     "s2": {
@@ -106,8 +106,8 @@
       "sinyal": 22,
       "menang": 15,
       "hit3": 1,
-      "ret_total": 0.13451252574050906,
-      "sinyal_terakhir": false
+      "ret_total": 0.13451346433824793,
+      "sinyal_terakhir": true
     },
     "s_and": {
       "sinyal": 0,
@@ -118,9 +118,9 @@
     },
     "s_or": {
       "sinyal": 68,
-      "menang": 40,
+      "menang": 41,
       "hit3": 0,
-      "ret_total": 0.10407075499301062,
+      "ret_total": 0.10407116223564426,
       "sinyal_terakhir": false
     }
   },
@@ -128,11 +128,11 @@
     "sampel_hari": 252,
     "peluang_naik_target": 0.023809523809523808,
     "win_rate": 0.4246031746031746,
-    "rata_gap": -3.149592590784886e-05,
+    "rata_gap": -4.6584237912017804e-05,
     "median_gap": 0.0,
     "rata_gap_positif": 0.008620170429671123,
-    "volatilitas_gap": 0.01727506971869029,
-    "volume_rata": 19284098.023715414,
+    "volatilitas_gap": 0.01727670252023325,
+    "volume_rata": 19313222.924901187,
     "target": 0.03
   }
 }
