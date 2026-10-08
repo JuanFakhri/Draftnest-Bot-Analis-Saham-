@@ -90,23 +90,23 @@
   "backtest": {
     "s1": {
       "sinyal": 61,
-      "menang": 30,
+      "menang": 28,
       "hit3": 0,
-      "ret_total": 0.17344536506765318,
-      "sinyal_terakhir": false
+      "ret_total": 0.17344553405339413,
+      "sinyal_terakhir": true
     },
     "s2": {
       "sinyal": 2,
-      "menang": 2,
+      "menang": 1,
       "hit3": 0,
-      "ret_total": 8.199330377177322e-08,
+      "ret_total": -3.009383161965574e-08,
       "sinyal_terakhir": false
     },
     "s3": {
       "sinyal": 24,
-      "menang": 15,
+      "menang": 16,
       "hit3": 1,
-      "ret_total": 0.2181268595642987,
+      "ret_total": 0.2181269034054858,
       "sinyal_terakhir": false
     },
     "s_and": {
@@ -118,21 +118,21 @@
     },
     "s_or": {
       "sinyal": 63,
-      "menang": 32,
+      "menang": 29,
       "hit3": 0,
-      "ret_total": 0.17344544706095696,
-      "sinyal_terakhir": false
+      "ret_total": 0.1734455039595625,
+      "sinyal_terakhir": true
     }
   },
   "harian": {
     "sampel_hari": 252,
     "peluang_naik_target": 0.003968253968253968,
-    "win_rate": 0.503968253968254,
-    "rata_gap": 0.0020708586049254275,
-    "median_gap": 5.209041425795721e-09,
-    "rata_gap_positif": 0.00580304902995205,
-    "volatilitas_gap": 0.007058140351324198,
-    "volume_rata": 5786648.61660079,
+    "win_rate": 0.5079365079365079,
+    "rata_gap": 0.0020864205840738395,
+    "median_gap": 5.312703919606134e-09,
+    "rata_gap_positif": 0.00578834996430751,
+    "volatilitas_gap": 0.007057879405251268,
+    "volume_rata": 5779043.083003952,
     "target": 0.03
   }
 }
